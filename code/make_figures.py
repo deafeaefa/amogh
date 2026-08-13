@@ -79,7 +79,7 @@ def load_sens(fname):
 
 rec_s, vqa_s = load_sens("sensitivity.csv"), load_sens("sensitivity_vqa.csv")
 layers = sorted({l for l, _ in rec_s})
-fig2, axes = plt.subplots(2, 1, figsize=(8.6, 2.75), sharex=True, constrained_layout=True)
+fig2, axes = plt.subplots(2, 1, figsize=(8.6, 2.55), sharex=True, constrained_layout=True)
 for ax, (title, d) in zip(axes, [("Grounding probe (coordinate-token KL reduction)", rec_s),
                                   ("VQA probe (answer-token KL reduction)", vqa_s)]):
     w = 0.4
