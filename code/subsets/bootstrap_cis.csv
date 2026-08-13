@@ -1,0 +1,2 @@
+bootstrap_ci,gcq_b425_vs_uniform_w4,+2.10,[0.30:3.90],paired n=1000 10k resamples seed0
+bootstrap_ci,gcq_b425_vs_random_mean,+1.73,[0.27:3.17],paired n=1000 10k resamples seed0
