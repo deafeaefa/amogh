@@ -35,14 +35,16 @@ Living checklist for the whole paper. Ticked items are done and verified.
 - [x] Week 1: **throughput bug found and fixed** — Qwen3-VL's vision patch-embed Conv3d (kernel==stride) hit a catastrophic cuDNN path (~4.5 s/image); replaced with its exact GEMM equivalent (`gcq_patches.py`): 140× prefill speedup, task metrics reproduce bit-for-bit-level (84.38% acc, ΔGIoU 0.0003, 0 parse fail); patch applied identically to ALL configs so comparisons are unaffected — document in paper's eval note
 - [x] Week 1: REC baselines DONE (n=1000 each) — BF16 **88.9%**, W8-RTN 88.7% (lossless ✓), **W4-RTN 84.5%** (−4.4 pts, R=95.0%); replicated on D_dev: 89.0→83.9 (−5.1 pts) — consistent across independent 1k samples; grounding is measurably damaged at W4 even before VQA comparison
 - [x] Week 1: D_dev selection-set baselines done (Week-3 prerequisite)
-- [x] Week 1: VQA + POPE chains DONE — VQA BF16 81.1 / W4 78.0 / W3 1.3 (collapse) / floor 36.8; POPE ≈held at W4 (adv F1 −0.004)
+- [x] Week 1: VQA + POPE chains DONE — VQA BF16 81.1 / W4 78.0 / W3 1.3 (collapse) / floor 36.8; POPE BF16 89.4 / W4 88.8 / W3 = exact 50% floor / floor 50.0. **Full W4-RTN floor-corrected retention gradient: POPE 98.5% > grounding 94.9% > VQA 92.8%** — capabilities degrade in proportion, VQA most affected; no grounding-first collapse under weight-only RTN
 - [x] Week 1: REC W3-RTN = global model collapse (gibberish; VQA confirms) — RTN unusable below W4; GPTQ arm needed for meaningful W3
 - [x] Week 2: **first complete grounding-gap datapoint (W4-RTN)** — floor-corrected retention: grounding 94.9% vs VQA 92.8% → **no grounding-first asymmetry at W4-RTN**; pre-registered contrast framing engaged ("quantization ≠ pruning"); caveats: RTN-only, large objects only, W4A8/GPTQ untested
 - [ ] Week 2: GPTQ arm of the grid (toolchain install staged) + W4A8 stress condition
 - [x] Week 3: **sensitivity map COMPLETE (56/56 groups, 512-sample probe)** — strong structure: localization sensitivity concentrates in a contiguous **mid-network attention band (layers 10–17)**; H2's "non-uniform" half confirmed; Figure 2 data ready
 - [x] Week 3: greedy allocation at B=4.25 — 7 attention groups (layers 10,12–17), 88.1M params, exactly 4.250 avg bits; 3 matched-budget random controls generated
-- [ ] Week 3: GCQ vs controls evals (RUNNING — GCQ REC + GCQ VQA + random×3 across 3 GPUs; the H3 test)
-- [ ] Week 3: VQA-sensitivity profile (for the VQA-driven allocation control — A1's ρ)
+- [x] Week 3: **GCQ vs controls — CORE CLAIM ESTABLISHED**: GCQ B=4.25 = 86.6% (+2.1 over uniform W4) vs random-promotion mean 84.87% (+0.37, 3 seeds) at IDENTICAL 88.1M-param budget — ~5–6× the random effect; B=4.5 = 87.3% (64% of loss recovered, monotonic budget curve); **VQA constraint passed with margin (78.4 vs baseline 78.0 — GCQ slightly HELPS VQA)**
+- [x] Week 3: H3 verdict (honest): partial recovery — 48%/64% at +6%/+12.5% LLM memory; 90% bar not reached training-free at ≤4.5 bits → GCL fine-tune remains the pre-registered escalation for the full paper
+- [ ] Week 3: VQA-sensitivity profile (RUNNING both GPUs) → Spearman ρ + VQA-driven allocation control (completes A1)
+- [ ] Week 3: proxy validation via promote-one decoded REC (allocation-level validation already implicit in GCQ-vs-random)
 - [ ] Week 2: full measurement grid {RTN,GPTQ,AWQ} × {W8,W4,W3} on frozen subsets
 - [ ] Week 2: floor-corrected retention + Figure 1
 - [ ] Week 3: sensitivity profiling (56 promote-one configs, coordinate-KL proxy)

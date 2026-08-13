@@ -34,6 +34,8 @@ def coord_char_span(ans):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--device", default="cuda:0")
+    ap.add_argument("--probe", choices=["rec", "vqa"], default="rec",
+                    help="rec: coordinate-token KL on D_probe; vqa: answer-token KL on the disjoint VQA probe")
     ap.add_argument("--modules", default="0:56", help="slice a:b of the sorted LLM-linear list")
     ap.add_argument("--limit", type=int, default=512)
     ap.add_argument("--batch", type=int, default=16)
@@ -41,7 +43,8 @@ def main():
     args = ap.parse_args()
 
     data_dir = os.environ["GCQ_DATA"]; runs_dir = os.environ["GCQ_RUNS"]
-    recs = json.load(open(os.path.join(data_dir, "subsets", "dprobe_refcoco_train_512.json")))[:args.limit]
+    probe_file = "dprobe_refcoco_train_512.json" if args.probe == "rec" else "vqa_probe_512.json"
+    recs = json.load(open(os.path.join(data_dir, "subsets", probe_file)))[:args.limit]
 
     processor = AutoProcessor.from_pretrained("Qwen/Qwen3-VL-2B-Instruct")
     processor.tokenizer.padding_side = "right"
@@ -70,10 +73,15 @@ def main():
         chunk = recs[i:i+args.batch]
         msgs, answers = [], []
         for r in chunk:
-            img = Image.open(os.path.join(data_dir, "images", "train2014", r["file_name"])).convert("RGB")
-            ans = gt_answer_string(r)
+            if args.probe == "rec":
+                imdir, ans = "train2014", gt_answer_string(r)
+                prompt = f"Locate the {r['expression']}, output its bbox_2d in JSON."
+            else:
+                imdir, ans = "val2014", r["answer"]
+                prompt = r["question"] + " Answer with a single word or phrase."
+            img = Image.open(os.path.join(data_dir, "images", imdir, r["file_name"])).convert("RGB")
             msgs.append([{"role":"user","content":[{"type":"image","image":img},
-                        {"type":"text","text":f"Locate the {r['expression']}, output its bbox_2d in JSON."}]},
+                        {"type":"text","text":prompt}]},
                         {"role":"assistant","content":[{"type":"text","text":ans}]}])
             answers.append(ans)
         inputs = processor.apply_chat_template(msgs, tokenize=True, add_generation_prompt=False,
@@ -82,7 +90,7 @@ def main():
         # vs re-tokenizing the substring, which BPE renders differently) and match char offsets
         pos = []  # list of (row, tokpos) — position of coordinate TOKEN t (KL uses logits at t-1)
         for row, ans in enumerate(answers):
-            s, e = coord_char_span(ans)
+            s, e = coord_char_span(ans) if args.probe == "rec" else (0, len(ans))
             coord_str = ans[s:e]
             n_real = int(inputs["attention_mask"][row].sum().item())
             ids = inputs["input_ids"][row][:n_real].tolist()  # right padding -> real prefix
@@ -96,7 +104,8 @@ def main():
                 if off < j + len(coord_str) and off + len(p) > j:
                     sel_toks.append(len(ids) - K + i)
                 off += len(p)
-            assert len(sel_toks) >= 4, f"too few coord tokens row {row}: {sel_toks}"
+            min_toks = 4 if args.probe == "rec" else 1
+            assert len(sel_toks) >= min_toks, f"too few target tokens row {row}: {sel_toks}"
             pos.extend((row, t) for t in sel_toks)
         batches.append((inputs, pos))
     ncoord = sum(len(p) for _, p in batches)
