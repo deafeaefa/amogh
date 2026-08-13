@@ -82,7 +82,7 @@ where $C$ is the set of coordinate-token positions in the teacher-forced target 
 
 \paragraph{Step 2---allocation (greedy, two-tier).} Given an average-bits budget $B$, promote the module with the highest $s_m$ per extra byte to 8-bit until the budget is exhausted; embeddings and \texttt{lm\_head} stay 8-bit always (they carry the digit vocabulary). The arithmetic, stated honestly: at $B=4.25$ the budget promotes ${\sim}88$M of the 2B's ${\sim}1.4$B quantizable parameters---about 7 attention modules, or 2--3 MLP modules, or a mix---costing ${\sim}{+}6\%$ of LLM weight memory (${\sim}$50--60\,MB) over uniform W4; $B=4.5$ doubles both. The allocation has only a handful of promotions of resolution: comparisons are between allocation \emph{policies} at matched memory. Known proxy--deployment gaps (per-module isolation, teacher forcing, RTN-for-profiling vs.\ GPTQ-final) are all bounded by one rule: no allocation is accepted on proxy numbers---every candidate is evaluated end-to-end on decoded $D_{\text{dev}}$ metrics; the proxy only orders the search.
 
-\paragraph{What we deliberately do not do.} No calibration-set changes (gains attribute to allocation alone), no training of any kind (distillation recovery is the pre-registered, deferred escalation), no learned allocator, no architecture or tokenizer changes, no RL, no novel activation-quantization scheme.
+\paragraph{What we deliberately do not do.} No calibration-set changes (gains attribute to allocation alone), no training of any kind, no learned allocator, no architecture, tokenizer, or RL changes.
 
 \section{Experimental plan}
 
@@ -137,15 +137,15 @@ where $C$ is the set of coordinate-token positions in the teacher-forced target 
 
 \section{Hypotheses and pre-registered kill criteria}
 
-\textbf{H1 (measurement).} At W4---and clearly at W3 and W4A8---grounding retention trails VQA retention by $>$10 floor-corrected points (support: \cite{nuwa,feather,vehicledamage,qwen3quant}; tempered by GWQ's near-lossless ${\sim}4.6$-bit table~\cite{gwq}).
+\textbf{H1 (measurement).} At W4---and clearly at W3 and W4A8---grounding retention trails VQA retention by $>$10 floor-corrected points.
 \textbf{H2 (structure).} $s_m$ is non-uniform and only partially correlated with VQA sensitivity ($\rho$ noticeably $<1$), so a grounding-driven allocation differs materially from a VQA-driven one.
 \textbf{H3 (method).} At the most aggressive setting where H1's gap manifests, grounding-driven allocation at $B \le 4.5$ recovers $\ge$90\% of the BF16 grounding lost by the uniform baseline (same quantizer, same calibration), within the 1.5-point VQA tolerance, at the stated ${\sim}$6--12\% LLM-weight-memory premium.
 
 \paragraph{Kill criteria (pre-registered).} Every branch resolved, with outcomes reported in findings (1)--(9): aggregate W4 damage proportional $\to$ contrast framing plus the size-gradient analysis that localizes the asymmetry; H2 confirmed ($\rho \approx 0$); per-module proxy under-powered $\to$ allocation-level validation operative; training-free ceiling ${\sim}65\%$ $\to$ the distillation escalation remains motivated and deferred.
 
-\paragraph{Known limitations.} (i) $s_m$ is teacher-forced and per-module; every accepted configuration is therefore selected end-to-end on decoded metrics. Our per-module check confirms the rule matters: single-module decoded effects ($\sim$0.3 pts) sit below decoded noise at feasible probe sizes, so proxy validity rests on the allocation-level control outcome, not per-module correlation. (ii) The novelty claim is \emph{to our knowledge} (closest: \cite{gwq,mbq,feather,nuwa,sqapvla,rethinkingsmall}), re-verified before submission. (iii) Results are RTN-scoped and single-model; motivating figures from recent preprints are provisional.
+\paragraph{Known limitations.} (i) $s_m$ is teacher-forced and per-module (single-module decoded effects sit below noise at feasible probe sizes), so every accepted configuration is selected end-to-end on decoded metrics and proxy validity rests on the allocation-level controls. (ii) The novelty claim is \emph{to our knowledge} (closest: \cite{gwq,mbq,feather,nuwa,sqapvla,rethinkingsmall}). (iii) Single-model; recent-preprint figures provisional.
 
-\paragraph{Feasibility and deliverables.} Everything is forward-only and demonstrably cheap: the entire preliminary campaign above consumed ${\sim}$30 single-researcher GPU-hours; the remainder (GPTQ/AWQ, W4A8) fits the original ${\sim}$60--75 GPU-hour envelope on public data. Deliverables: the measurements, the sensitivity maps, the recipe with code, and a checkpoint \emph{whose model card reports grounding} --- modeling the reporting practice we recommend.
+\paragraph{Feasibility and deliverables.} The entire campaign is forward-only and consumed ${\sim}$50 single-researcher GPU-hours on public data. Deliverables: the measurements, both sensitivity maps, the recipe with code, and a checkpoint \emph{whose model card reports grounding}.
 
 \begin{thebibliography}{20}\small
 \bibitem{qwen3vl} Bai et al. Qwen3-VL technical report. arXiv:2511.21631.

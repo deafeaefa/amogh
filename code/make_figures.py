@@ -28,7 +28,7 @@ rec_r  = [rprime(a, 88.90, 3.00) for a in (88.70, 84.50, 0.00)]
 vqa_r  = [None] + [rprime(a, 81.14, 36.84) for a in (77.95, 1.34)]
 pope_r = [None] + [rprime(a, 89.39, 50.00) for a in (88.77, 50.42)]
 
-fig, (axA, axB) = plt.subplots(1, 2, figsize=(8.6, 2.5), constrained_layout=True)
+fig, (axA, axB) = plt.subplots(1, 2, figsize=(8.6, 2.35), constrained_layout=True)
 xs = range(len(bits))
 axA.plot(xs, rec_r, "-o", color=C_G, lw=2, ms=5, label="Grounding (REC)")
 axA.plot(xs[1:], vqa_r[1:], "-s", color=C_V, lw=2, ms=5, label="VQAv2")
@@ -79,7 +79,7 @@ def load_sens(fname):
 
 rec_s, vqa_s = load_sens("sensitivity.csv"), load_sens("sensitivity_vqa.csv")
 layers = sorted({l for l, _ in rec_s})
-fig2, axes = plt.subplots(2, 1, figsize=(8.6, 3.0), sharex=True, constrained_layout=True)
+fig2, axes = plt.subplots(2, 1, figsize=(8.6, 2.75), sharex=True, constrained_layout=True)
 for ax, (title, d) in zip(axes, [("Grounding probe (coordinate-token KL reduction)", rec_s),
                                   ("VQA probe (answer-token KL reduction)", vqa_s)]):
     w = 0.4
