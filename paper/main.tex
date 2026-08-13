@@ -101,20 +101,26 @@ where $C$ is the set of coordinate-token positions in the teacher-forced target 
 
 \begin{table}[t]
   \centering
-  \caption{Main results grid (planned). \todo{fill from runs CSV}}
+  \caption{\textbf{Preliminary results} (RTN, simulated weight-only quantization of all LLM blocks; frozen seed-0 subsets: REC $n{=}1000$ RefCOCO-val expressions, VQAv2 $n{=}5000$, POPE $n{=}9000$; greedy decoding; identical eval pipeline for every row). Floors from image-blind passes: REC 3.0, VQAv2 36.8, POPE 50.0.}
   \label{tab:main}
   \small
-  \begin{tabular}{llcccccc}
+  \begin{tabular}{lccccc}
     \toprule
-    Config & Bits & REC@0.5 & GIoU & VQAv2 & POPE & ODinW & Mem (GB) \\
+    Config & Avg bits & REC@0.5 & mean GIoU & VQAv2 & POPE acc \\
     \midrule
-    BF16 & 16 & -- & -- & -- & -- & -- & -- \\
-    GPTQ (text calib) & 4 & -- & -- & -- & -- & -- & -- \\
-    GCQ (ours) & 4.25 & -- & -- & -- & -- & -- & -- \\
-    \todo{...} & & & & & & & \\
+    BF16 reference & 16 & 88.9 & 0.797 & 81.1 & 89.4 \\
+    RTN W8 & 8 & 88.7 & 0.799 & -- & -- \\
+    RTN W4 (uniform) & 4 & 84.5 & 0.754 & 78.0 & 88.8 \\
+    RTN W3 (uniform) & 3 & 0.0$^{\dagger}$ & -- & 1.3$^{\dagger}$ & 50.4$^{\dagger}$ \\
+    Random promotion @4.25 (3 seeds) & 4.25 & 84.9$\pm$0.3 & 0.758 & -- & -- \\
+    \textbf{GCQ (ours)} & \textbf{4.25} & \textbf{86.6} & \textbf{0.775} & \textbf{78.4} & -- \\
+    \textbf{GCQ (ours)} & \textbf{4.5} & \textbf{87.3} & \textbf{0.781} & -- & -- \\
     \bottomrule
-  \end{tabular}
+  \end{tabular}\\[2pt]
+  {\scriptsize $^{\dagger}$W3-RTN is global model collapse (gibberish output; all capabilities die together) --- RTN is unusable below W4 on this model; the GPTQ arm covers sub-4-bit.}
 \end{table}
+
+\paragraph{Preliminary findings (completed).} Four results from the first measurement campaign, all on the frozen subsets above. (1) \emph{No grounding-first asymmetry under weight-only RTN at W4}: floor-corrected retention is POPE 98.5\% $>$ grounding 94.9\% $>$ VQA 92.8\% --- capabilities degrade roughly proportionally, in contrast to token pruning's 95\%-vs-47\% asymmetry; grounding damage is nonetheless real ($-4.4$ points, replicated at $-5.1$ on the disjoint selection set). (2) \emph{Localization sensitivity is concentrated, not diffuse} (H2): the promote-one-module profile over all 56 module-groups peaks in a contiguous band of \emph{attention} modules in layers 10--17 of 28; MLPs lose every per-byte comparison at the B=4.25 budget. (3) \emph{Sensitivity-guided allocation works and is specific}: promoting the band to 8-bit ($+6.25$\% LLM weight memory) recovers 48\% of the lost grounding (84.5 $\to$ 86.6), $5$--$6\times$ the effect of random promotion at an \emph{identical} byte budget ($84.9 \pm 0.3$); B=4.5 recovers 64\%, monotonically. (4) \emph{The general-capability constraint holds with margin}: GCQ's VQAv2 is $+0.4$ above the uniform-W4 baseline --- recovering grounding cost nothing. H3's $\ge$90\%-recovery bar is not reached training-free at $\le$4.5 bits; the pre-registered escalation (\S\ref{sec:method}) covers the remainder.
 
 \paragraph{Baselines and matched controls.} BF16; RTN/GPTQ/AWQ with standard text calibration (status quo); uniform W4; VQA-sensitivity-driven allocation at equal memory; random promotion at equal memory; GCQ. Equal-memory controls ensure any gain is attributable to \emph{where} the bits go, not how many there are.
 
