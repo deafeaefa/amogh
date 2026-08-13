@@ -29,9 +29,11 @@ Living checklist for the whole paper. Ticked items are done and verified.
 - [x] Week 0e: git repo initialized in ~/GCQ; code + frozen subsets committed
 - [ ] Week 0f: subset images fetched (5,772 targeted images ≈ 1 GB instead of 19 GB of COCO zips — in progress)
 - [ ] Week 0g: ODinW slice (deferred to Week 4 per plan)
-- [ ] Week 1: eval harness (REC parser + IoU/GIoU, VQAv2-5k, POPE); frozen subsets committed
-- [ ] Week 1: BF16 baselines + image-blind floor runs
-- [ ] Week 1: first W4 GPTQ checkpoint + eval → first grounding-gap datapoint
+- [x] Week 0f: subset images fetched — all 5,772, zero failures, 880 MB
+- [x] Week 1: eval harnesses written + sanity-validated — REC (acc@0.5, GIoU, parse-fail, size-stratified; sanity 32 samples: **84.4% acc, 0 parse failures** — plausible vs published 2B numbers) and VQA/POPE (soft accuracy, F1); per-sample JSONL + one-CSV-row-per-run logging
+- [x] Week 1: simulated RTN quantizer written (`quant_utils.py`) — groupwise symmetric, LLM blocks only, vision tower/embeddings/lm_head untouched; supports per-module promotion overrides (ready for Week-3 allocation)
+- [ ] Week 1: BF16 baselines + image-blind floor runs (RUNNING — 3 GPU chains in parallel)
+- [ ] Week 1: first W4 quantized eval → first grounding-gap datapoint (RUNNING — W4-RTN queued in same chains; GPTQ checkpoint to follow)
 - [ ] Week 2: full measurement grid {RTN,GPTQ,AWQ} × {W8,W4,W3} on frozen subsets
 - [ ] Week 2: floor-corrected retention + Figure 1
 - [ ] Week 3: sensitivity profiling (56 promote-one configs, coordinate-KL proxy)
