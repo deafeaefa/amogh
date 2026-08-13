@@ -29,6 +29,7 @@ def main():
     ap.add_argument("--blank-image", action="store_true")
     ap.add_argument("--rtn-bits", type=int, default=0)
     ap.add_argument("--rtn-group", type=int, default=128)
+    ap.add_argument("--max-pixels", type=int, default=1003520)
     args = ap.parse_args()
 
     data_dir = os.environ["GCQ_DATA"]; runs_dir = os.environ["GCQ_RUNS"]
@@ -48,7 +49,7 @@ def main():
                                       prompt=d["text"] + " Answer yes or no.", label=d["label"]))
     if args.limit: items = items[:args.limit]
 
-    processor = AutoProcessor.from_pretrained("Qwen/Qwen3-VL-2B-Instruct")
+    processor = AutoProcessor.from_pretrained("Qwen/Qwen3-VL-2B-Instruct", max_pixels=args.max_pixels)
     processor.tokenizer.padding_side = "left"
     model = AutoModelForImageTextToText.from_pretrained(args.model, dtype=torch.bfloat16, device_map=args.device)
     model.eval()
@@ -95,6 +96,7 @@ def main():
                     else: st[3] += 1
                     score_sum += 1.0 if yes == gt_yes else 0.0
                     fout.write(json.dumps({"uid": it["uid"], "pred": pred, "correct": yes == gt_yes}) + "\n")
+            fout.flush()
             if (i//args.batch) % 20 == 0:
                 el = time.time()-t0
                 print(f"  {n}/{len(items)} running={score_sum/max(n,1):.3f} ({el:.0f}s, {n/max(el,1):.1f}/s)", flush=True)

@@ -53,6 +53,7 @@ def main():
     ap.add_argument("--blank-image", action="store_true", help="image-blind floor run")
     ap.add_argument("--rtn-bits", type=int, default=0, help="apply simulated RTN at this width to LLM blocks")
     ap.add_argument("--rtn-group", type=int, default=128)
+    ap.add_argument("--max-pixels", type=int, default=1003520, help="1280*28*28, Qwen-standard eval cap; identical for ALL configs")
     args = ap.parse_args()
 
     data_dir = os.environ["GCQ_DATA"]; runs_dir = os.environ["GCQ_RUNS"]
@@ -61,8 +62,9 @@ def main():
         recs = json.load(f)
     if args.limit: recs = recs[:args.limit]
 
-    processor = AutoProcessor.from_pretrained("Qwen/Qwen3-VL-2B-Instruct")
+    processor = AutoProcessor.from_pretrained("Qwen/Qwen3-VL-2B-Instruct", max_pixels=args.max_pixels)
     processor.tokenizer.padding_side = "left"
+    print("image processor max_pixels:", getattr(processor.image_processor, "max_pixels", "N/A"))
     t0 = time.time()
     model = AutoModelForImageTextToText.from_pretrained(args.model, dtype=torch.bfloat16, device_map=args.device)
     model.eval()
@@ -109,6 +111,7 @@ def main():
                 giou_sum += giou
                 fout.write(json.dumps({"uid": r["uid"], "pred_raw": text.strip()[:200],
                                        "box1000": box, "iou": round(iou,4), "giou": round(giou,4), "hit": hit}) + "\n")
+            fout.flush()
             if (i//args.batch) % 10 == 0:
                 el = time.time()-t0
                 print(f"  {n}/{len(recs)} acc={correct/max(n,1):.3f} ({el:.0f}s, {n/max(el,1):.1f}/s)", flush=True)
