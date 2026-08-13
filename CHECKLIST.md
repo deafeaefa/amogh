@@ -33,8 +33,10 @@ Living checklist for the whole paper. Ticked items are done and verified.
 - [x] Week 1: eval harnesses written + sanity-validated — REC (acc@0.5, GIoU, parse-fail, size-stratified; sanity 32 samples: **84.4% acc, 0 parse failures** — plausible vs published 2B numbers) and VQA/POPE (soft accuracy, F1); per-sample JSONL + one-CSV-row-per-run logging
 - [x] Week 1: simulated RTN quantizer written (`quant_utils.py`) — groupwise symmetric, LLM blocks only, vision tower/embeddings/lm_head untouched; supports per-module promotion overrides (ready for Week-3 allocation)
 - [x] Week 1: **throughput bug found and fixed** — Qwen3-VL's vision patch-embed Conv3d (kernel==stride) hit a catastrophic cuDNN path (~4.5 s/image); replaced with its exact GEMM equivalent (`gcq_patches.py`): 140× prefill speedup, task metrics reproduce bit-for-bit-level (84.38% acc, ΔGIoU 0.0003, 0 parse fail); patch applied identically to ALL configs so comparisons are unaffected — document in paper's eval note
-- [ ] Week 1: BF16 baselines + floors (RUNNING — 4-GPU chains: REC/VQA/POPE/grid, batch 32)
-- [ ] Week 1: first W4 quantized eval → first grounding-gap datapoint (RUNNING — W4-RTN second in each chain; W3 third — gap + aggressive width tonight)
+- [x] Week 1: REC baselines DONE (n=1000 each) — BF16 **88.9%**, W8-RTN 88.7% (lossless ✓), **W4-RTN 84.5%** (−4.4 pts, R=95.0%); replicated on D_dev: 89.0→83.9 (−5.1 pts) — consistent across independent 1k samples; grounding is measurably damaged at W4 even before VQA comparison
+- [x] Week 1: D_dev selection-set baselines done (Week-3 prerequisite)
+- [ ] Week 1: VQA + POPE baselines & W4/W3 (RUNNING — cuda:1/cuda:2); REC W3 + floor (RUNNING — cuda:0)
+- [ ] Week 2: grounding-gap computation (needs VQA retention + floors)
 - [ ] Week 2: full measurement grid {RTN,GPTQ,AWQ} × {W8,W4,W3} on frozen subsets
 - [ ] Week 2: floor-corrected retention + Figure 1
 - [ ] Week 3: sensitivity profiling (56 promote-one configs, coordinate-KL proxy)
