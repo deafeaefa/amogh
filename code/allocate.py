@@ -18,6 +18,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--budget", type=float, default=4.25)
     ap.add_argument("--seeds", type=int, nargs="*", default=[1, 2, 3])
+    ap.add_argument("--sens-file", default="sensitivity.csv")
+    ap.add_argument("--prefix", default="gcq")
     args = ap.parse_args()
     runs = os.environ["GCQ_RUNS"]
 
@@ -34,7 +36,7 @@ def main():
 
     # ---- sensitivity ----
     s = {}
-    with open(os.path.join(runs, "sensitivity.csv")) as f:
+    with open(os.path.join(runs, args.sens_file)) as f:
         for row in csv.DictReader(f):
             if row["layer"] == "layer": continue  # duplicated header from parallel writers
             s[(int(row["layer"]), row["kind"])] = float(row["s_m"])
@@ -55,7 +57,7 @@ def main():
     def substrings(keys):
         return [f"layers.{l}.self_attn" if kind == "attn" else f"layers.{l}.mlp" for l, kind in keys]
 
-    with open(os.path.join(runs, f"promote_gcq_b{args.budget}.json"), "w") as f:
+    with open(os.path.join(runs, f"promote_{args.prefix}_b{args.budget}.json"), "w") as f:
         json.dump({"bits": 8, "substrings": substrings(chosen), "avg_bits": 4 + 4*used/total,
                    "params_promoted": used, "groups": [list(k) for k in sorted(chosen)]}, f, indent=1)
 
