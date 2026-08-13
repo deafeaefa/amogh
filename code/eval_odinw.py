@@ -26,6 +26,7 @@ def iou(a, b):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--tag", required=True)
+    ap.add_argument("--model", default="Qwen/Qwen3-VL-2B-Instruct")
     ap.add_argument("--rtn-bits", type=int, default=0)
     ap.add_argument("--promote-file", default="")
     ap.add_argument("--device", default="cuda:0")
@@ -46,7 +47,7 @@ def main():
 
     processor = AutoProcessor.from_pretrained("Qwen/Qwen3-VL-2B-Instruct", max_pixels=1003520)
     processor.tokenizer.padding_side = "left"
-    model = AutoModelForImageTextToText.from_pretrained("Qwen/Qwen3-VL-2B-Instruct",
+    model = AutoModelForImageTextToText.from_pretrained(args.model,
                                                         dtype=torch.bfloat16, device_map=args.device).eval()
     if args.rtn_bits:
         from quant_utils import apply_rtn
