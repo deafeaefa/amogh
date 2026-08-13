@@ -20,21 +20,23 @@ def main():
     os.makedirs(out, exist_ok=True)
 
     # standard text calibration: wikitext-2 chunks (the field's default practice)
-    ds = load_dataset("wikitext", "wikitext-2-raw-v1", split="train")
+    ds = load_dataset("Salesforce/wikitext", "wikitext-2-raw-v1", split="train")
     texts, buf = [], ""
     for row in ds:
         t = row["text"].strip()
         if not t: continue
         buf += " " + t
         if len(buf) > 2000:
-            texts.append(buf.strip()); buf = ""
+            # qwen3_vl calibration goes through the chat template -> message format
+            texts.append([{"role": "user", "content": [{"type": "text", "text": buf.strip()}]}])
+            buf = ""
         if len(texts) >= args.nsamples: break
-    print(f"calibration: {len(texts)} text chunks")
+    print(f"calibration: {len(texts)} chat-format text chunks")
 
     qc = QuantizeConfig(bits=args.bits, group_size=args.group)
     t0 = time.time()
     model = GPTQModel.load("Qwen/Qwen3-VL-2B-Instruct", qc)
-    model.quantize(texts, batch_size=4)
+    model.quantize(texts, batch_size=1)
     print(f"quantized in {time.time()-t0:.0f}s")
     model.save(out)
     print(f"SAVED {out}")
