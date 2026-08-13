@@ -7,6 +7,7 @@
 
 \documentclass{article}
 
+\PassOptionsToPackage{numbers}{natbib}
 \IfFileExists{neurips_2026.sty}{%
   \usepackage{neurips_2026} % anonymized (default) — correct for double-blind submission
 }{%
@@ -109,7 +110,7 @@ where $C$ is the set of coordinate-token positions in the teacher-forced target 
   \caption{\textbf{Preliminary results} (RTN, simulated weight-only quantization of all LLM blocks; frozen seed-0 subsets: REC $n{=}1000$ RefCOCO-val expressions, VQAv2 $n{=}5000$, POPE $n{=}9000$; greedy decoding; identical eval pipeline for every row). Floors from image-blind passes: REC 3.0, VQAv2 36.8, POPE 50.0.}
   \label{tab:main}
   \small
-  \begin{tabular}{lccccc}
+  \begin{tabular}{lcccccc}
     \toprule
     Config & Avg bits & REC@0.5 & mean GIoU & VQAv2 & POPE acc & ODinW F1 \\
     \midrule
