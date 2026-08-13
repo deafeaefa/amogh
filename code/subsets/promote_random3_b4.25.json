@@ -1,0 +1,34 @@
+{
+ "bits": 8,
+ "substrings": [
+  "layers.8.mlp",
+  "layers.23.self_attn",
+  "layers.5.self_attn",
+  "layers.10.self_attn",
+  "layers.16.self_attn"
+ ],
+ "avg_bits": 4.25,
+ "params_promoted": 88080384,
+ "groups": [
+  [
+   5,
+   "attn"
+  ],
+  [
+   8,
+   "mlp"
+  ],
+  [
+   10,
+   "attn"
+  ],
+  [
+   16,
+   "attn"
+  ],
+  [
+   23,
+   "attn"
+  ]
+ ]
+}

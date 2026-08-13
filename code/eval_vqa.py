@@ -31,6 +31,7 @@ def main():
     ap.add_argument("--rtn-bits", type=int, default=0)
     ap.add_argument("--rtn-group", type=int, default=128)
     ap.add_argument("--max-pixels", type=int, default=1003520)
+    ap.add_argument("--promote-file", default="")
     args = ap.parse_args()
 
     data_dir = os.environ["GCQ_DATA"]; runs_dir = os.environ["GCQ_RUNS"]
@@ -56,8 +57,14 @@ def main():
     model.eval()
     if args.rtn_bits:
         from quant_utils import apply_rtn
-        applied = apply_rtn(model, args.rtn_bits, args.rtn_group)
-        print(f"RTN W{args.rtn_bits} g{args.rtn_group} applied to {len(applied)} LLM linears")
+        promote = None
+        if args.promote_file:
+            with open(args.promote_file) as pf:
+                pj = json.load(pf)
+            promote = {s: pj["bits"] for s in pj["substrings"]}
+        applied = apply_rtn(model, args.rtn_bits, args.rtn_group, promote=promote)
+        n8 = sum(1 for _, b in applied if b == 8)
+        print(f"RTN W{args.rtn_bits} g{args.rtn_group} applied to {len(applied)} LLM linears ({n8} at 8-bit)")
 
     out_path = os.path.join(runs_dir, f"{args.tag}.{args.task}.jsonl")
     n = 0; score_sum = 0.0

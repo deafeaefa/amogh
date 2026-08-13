@@ -55,6 +55,7 @@ def main():
     ap.add_argument("--rtn-bits", type=int, default=0, help="apply simulated RTN at this width to LLM blocks")
     ap.add_argument("--rtn-group", type=int, default=128)
     ap.add_argument("--max-pixels", type=int, default=1003520, help="1280*28*28, Qwen-standard eval cap; identical for ALL configs")
+    ap.add_argument("--promote-file", default="", help="JSON {substrings:[], bits:8}: promote these modules during RTN")
     args = ap.parse_args()
 
     data_dir = os.environ["GCQ_DATA"]; runs_dir = os.environ["GCQ_RUNS"]
@@ -71,8 +72,15 @@ def main():
     model.eval()
     if args.rtn_bits:
         from quant_utils import apply_rtn
-        applied = apply_rtn(model, args.rtn_bits, args.rtn_group)
-        print(f"RTN W{args.rtn_bits} g{args.rtn_group} applied to {len(applied)} LLM linears")
+        promote = None
+        if args.promote_file:
+            with open(args.promote_file) as pf:
+                pj = json.load(pf)
+            promote = {s: pj["bits"] for s in pj["substrings"]}
+            print(f"promoting {len(promote)} module groups to {pj['bits']}-bit (avg {pj['avg_bits']:.3f})")
+        applied = apply_rtn(model, args.rtn_bits, args.rtn_group, promote=promote)
+        n8 = sum(1 for _, b in applied if b == 8)
+        print(f"RTN W{args.rtn_bits} g{args.rtn_group} applied to {len(applied)} LLM linears ({n8} at 8-bit)")
     print(f"model {args.model} loaded {time.time()-t0:.0f}s")
 
     out_path = os.path.join(runs_dir, args.tag + ".rec.jsonl")

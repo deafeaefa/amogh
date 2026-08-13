@@ -1,0 +1,44 @@
+{
+ "bits": 8,
+ "substrings": [
+  "layers.15.self_attn",
+  "layers.17.self_attn",
+  "layers.16.self_attn",
+  "layers.14.self_attn",
+  "layers.13.self_attn",
+  "layers.12.self_attn",
+  "layers.10.self_attn"
+ ],
+ "avg_bits": 4.25,
+ "params_promoted": 88080384,
+ "groups": [
+  [
+   10,
+   "attn"
+  ],
+  [
+   12,
+   "attn"
+  ],
+  [
+   13,
+   "attn"
+  ],
+  [
+   14,
+   "attn"
+  ],
+  [
+   15,
+   "attn"
+  ],
+  [
+   16,
+   "attn"
+  ],
+  [
+   17,
+   "attn"
+  ]
+ ]
+}
