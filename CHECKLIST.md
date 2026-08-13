@@ -16,8 +16,8 @@ Living checklist for the whole paper. Ticked items are done and verified.
 - [x] LaTeX paper started: `paper/main.tex` — all sections ported, compiles with or without official style file
 - [ ] Download official `neurips_2026.sty` and compile with it
 - [ ] Fill bibliography TODOs (author lists for recent preprints)
-- [ ] Insert preliminary results: Figure 1 + partial Table 1 (needs Week-1/2 runs)
-- [ ] Figure 2 (sensitivity map) — optional for submission, required for camera-ready
+- [x] Preliminary results inserted: real Table 1 + findings paragraph + Figures 1-2 (paper compiles, 7 draft pages pre-compression)
+- [x] Figure 2 done (ahead of schedule — was camera-ready item)
 - [ ] Compress to ≤5 pages under the official style
 - [ ] Final proofread pass (terminology: grounding/spatial precision consistent; all §-refs valid)
 
@@ -46,7 +46,7 @@ Living checklist for the whole paper. Ticked items are done and verified.
 - [x] Week 3: symmetric check — VQA-driven-on-VQA 78.60 (+0.65) vs grounding-driven-on-VQA 78.41 (+0.46): each capability is best protected by its own map; full cross-matrix consistent with ρ=0.001
 - [ ] Week 3: proxy validation via promote-one decoded REC (RUNNING — 9 modules spanning s_m range, 500-sample decoded each; allocation-level validation already implicit in GCQ-vs-random)
 - [ ] Week 2/4: GPTQ/AWQ arm of the grid (blocked on gptqmodel import shim) + W4A8 stress
-- [ ] Week 4: Figure 1 (retention curves) + Figure 2 (sensitivity map) rendered from results.csv/sensitivity.csv
+- [x] Week 4: Figures 1+2 rendered from real data (CVD-safe Okabe-Ito, visually inspected, collision-fixed) and wired into main.tex — includes the bonus finding that layer-15 attention is grounding-critical but VQA-negative
 - [ ] Week 4: ODinW-13 held-out slice (download + eval, touched once)
 - [ ] Week 4: full testA/testB runs for headline configs (BF16, W4, GCQ 4.25/4.5)
 
