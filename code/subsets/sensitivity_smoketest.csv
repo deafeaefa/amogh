@@ -1,0 +1,3 @@
+layer,kind,kl_promoted,kl_base,s_m,n_pos,n_probe
+0,attn,0.124174,0.126850,0.002676,935,48
+0,mlp,0.126957,0.126850,-0.000107,935,48
