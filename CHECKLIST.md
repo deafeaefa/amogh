@@ -19,7 +19,7 @@ Living checklist for the whole paper. Ticked items are done and verified.
 - [x] Preliminary results inserted: real Table 1 + findings paragraph + Figures 1-2 (paper compiles, 7 draft pages pre-compression)
 - [x] Figure 2 done (ahead of schedule — was camera-ready item)
 - [x] Compressed to exactly 5 pages under official neurips_2026.sty (page 6 = refs/disclosure/appendix; 0 errors); science content fully preserved
-- [ ] Final proofread pass (terminology: grounding/spatial precision consistent; all §-refs valid)
+- [x] Proofread pass: 0 LaTeX errors/warnings, all labels referenced (table/figure cross-refs added), no stale "planned"/TODO text, terminology consistent
 
 ## Experiments (from plan-4-weeks.md)
 - [x] Week 0a: environment verified — cluster `spring-2026-pyt` env (Python 3.12, torch 2.9.1+cu128, transformers 5.15.0 with native `qwen3_vl`); job owns 3 idle 46 GB A6000s (physical 4/5/6); `code/env.sh` helper; zero disk cost
@@ -58,7 +58,7 @@ Living checklist for the whole paper. Ticked items are done and verified.
 - [x] VQA constraint pre-registered (1.5 pts, paired test, fixed ~5k items)
 - [x] Kill criteria pre-registered for H1/H2/proxy/method-ceiling
 - [x] Scooping re-check run 2026-08-13: closest new finds QIG (2603.17809, token-level sensitivity, no grounding metrics — verified via abstract) and general PTQ lines; NO work combines grounding measurement + capability-driven allocation. Re-run once more at the actual submission click
-- [ ] Anonymization pass (PDF metadata included); double-blind check of appendix
+- [x] Anonymization audit clean: empty PDF author metadata, \author{Anonymous}, no identifying strings in PDF or tex (one false positive: "generic")
 
 ## Submission mechanics
 - [ ] OpenReview account + ODI 2026 venue located (link in workshop CFP)
