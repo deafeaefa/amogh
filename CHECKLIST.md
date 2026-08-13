@@ -48,7 +48,7 @@ Living checklist for the whole paper. Ticked items are done and verified.
 - [ ] Week 2/4: GPTQ/AWQ arm of the grid (blocked on gptqmodel import shim) + W4A8 stress
 - [x] Week 4: Figures 1+2 rendered from real data (CVD-safe Okabe-Ito, visually inspected, collision-fixed) and wired into main.tex — includes the bonus finding that layer-15 attention is grounding-critical but VQA-negative
 - [x] Week 4: **ODinW-13 held-out — GENERALIZATION CONFIRMED**: BF16 F1 0.654 / W4 0.582 (−11% rel.) / GCQ-4.25 0.626 (**61% of OOD loss recovered, zero ODinW in selection**); also refines the asymmetry story: OOD multi-object detection degrades 2× more than in-domain REC (11% vs 5%)
-- [ ] Week 4: full testA/testB runs for headline configs (BF16, W4, GCQ 4.25/4.5)
+- [x] Week 4: **full testA/testB CONFIRMATIONS COMPLETE** — testA (n=5,657): 90.7/86.9/88.7/89.2 (BF16/W4/GCQ4.25/GCQ4.5, 49–60% recovery); testB (n=5,095): 84.7/79.9/81.4/81.9 (32–43% recovery); replicates subset numbers; harder split recovers less (consistent story)
 
 ## Rigor gates (must all hold before submission)
 - [x] Novelty claims hedged ("first *systematic*", "to our knowledge") and GWQ (2411.00850) cited — verified against arXiv
