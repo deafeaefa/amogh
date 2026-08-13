@@ -54,6 +54,7 @@ def main():
     ap.add_argument("--blank-image", action="store_true", help="image-blind floor run")
     ap.add_argument("--rtn-bits", type=int, default=0, help="apply simulated RTN at this width to LLM blocks")
     ap.add_argument("--rtn-group", type=int, default=128)
+    ap.add_argument("--a8", action="store_true", help="simulated 8-bit dynamic activation quant on LLM linears")
     ap.add_argument("--max-pixels", type=int, default=1003520, help="1280*28*28, Qwen-standard eval cap; identical for ALL configs")
     ap.add_argument("--promote-file", default="", help="JSON {substrings:[], bits:8}: promote these modules during RTN")
     args = ap.parse_args()
@@ -81,6 +82,9 @@ def main():
         applied = apply_rtn(model, args.rtn_bits, args.rtn_group, promote=promote)
         n8 = sum(1 for _, b in applied if b == 8)
         print(f"RTN W{args.rtn_bits} g{args.rtn_group} applied to {len(applied)} LLM linears ({n8} at 8-bit)")
+    if args.a8:
+        from quant_utils import apply_a8
+        print(f"A8 hooks on {apply_a8(model)} linears")
     print(f"model {args.model} loaded {time.time()-t0:.0f}s")
 
     out_path = os.path.join(runs_dir, args.tag + ".rec.jsonl")

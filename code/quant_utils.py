@@ -45,3 +45,17 @@ def apply_rtn(model, bits: int, group: int = 128, only_module: str = None, skip_
         rtn_quant_tensor_(mod.weight, b, group)
         applied.append((name, b))
     return applied
+
+def a8_prehook(module, args):
+    """Per-token dynamic symmetric int8 activation quant-dequant (W4A8 stress condition)."""
+    x = args[0]
+    s = x.abs().amax(dim=-1, keepdim=True).clamp_min(1e-8) / 127
+    return ((x / s).round().clamp_(-127, 127) * s,) + args[1:]
+
+def apply_a8(model):
+    n = 0
+    for name, mod in model.named_modules():
+        if isinstance(mod, torch.nn.Linear) and LLM_FILTER in name:
+            mod.register_forward_pre_hook(a8_prehook)
+            n += 1
+    return n

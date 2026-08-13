@@ -65,6 +65,7 @@ def main():
     print(f"{len(idx)} images -> {len(queries)} (image, category) queries")
 
     stats = defaultdict(lambda: [0, 0, 0])  # dataset -> [tp, fp, fn]
+    flog = open(os.path.join(runs, f"{args.tag}.odinw.jsonl"), "w")
     t0 = time.time()
     for b in range(0, len(queries), args.batch):
         chunk = queries[b:b+args.batch]
@@ -93,6 +94,10 @@ def main():
                 if best >= 0.5: used[bj] = True; tp += 1
             st = stats[ex["dataset_name"]]
             st[0] += tp; st[1] += len(preds)-tp; st[2] += len(gts)-tp
+            for j, g in enumerate(gts):
+                flog.write(json.dumps({"ds": ex["dataset_name"], "cat": c,
+                                       "area": (g[2]-g[0])*(g[3]-g[1]), "matched": used[j]}) + "\n")
+            flog.flush()
         if (b//args.batch) % 10 == 0:
             print(f"  {b+len(chunk)}/{len(queries)} ({time.time()-t0:.0f}s)", flush=True)
 
