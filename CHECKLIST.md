@@ -57,7 +57,7 @@ Living checklist for the whole paper. Ticked items are done and verified.
 - [x] Floor-corrected retention R′ defined; GIoU never reported as a ratio
 - [x] VQA constraint pre-registered (1.5 pts, paired test, fixed ~5k items)
 - [x] Kill criteria pre-registered for H1/H2/proxy/method-ceiling
-- [ ] Re-run scooping searches within 48h of submission ("grounding-aware quantization VLM", "RefCOCO quantized VLM", etc.)
+- [x] Scooping re-check run 2026-08-13: closest new finds QIG (2603.17809, token-level sensitivity, no grounding metrics — verified via abstract) and general PTQ lines; NO work combines grounding measurement + capability-driven allocation. Re-run once more at the actual submission click
 - [ ] Anonymization pass (PDF metadata included); double-blind check of appendix
 
 ## Submission mechanics
