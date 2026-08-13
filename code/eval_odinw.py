@@ -28,11 +28,14 @@ def main():
     ap.add_argument("--tag", required=True)
     ap.add_argument("--model", default="Qwen/Qwen3-VL-2B-Instruct")
     ap.add_argument("--rtn-bits", type=int, default=0)
+    ap.add_argument("--a8", action="store_true", help="simulated 8-bit dynamic activation quant on LLM linears")
     ap.add_argument("--promote-file", default="")
     ap.add_argument("--device", default="cuda:0")
     ap.add_argument("--images", type=int, default=500)
     ap.add_argument("--batch", type=int, default=24)
     args = ap.parse_args()
+    if "gptq" in args.tag.lower() and args.model.startswith("Qwen/"):
+        raise SystemExit("refusing: tag says gptq but --model is the base HF id; pass the checkpoint path")
     runs = os.environ["GCQ_RUNS"]
 
     ds = load_dataset("kcz358/ODinW-13", split="test")
@@ -57,6 +60,9 @@ def main():
             promote = {s: pj["bits"] for s in pj["substrings"]}
         applied = apply_rtn(model, args.rtn_bits, 128, promote=promote)
         print(f"RTN W{args.rtn_bits} applied ({sum(1 for _,b in applied if b==8)} groups at 8-bit)")
+    if args.a8:
+        from quant_utils import apply_a8
+        print(f"A8 hooks on {apply_a8(model)} linears")
 
     # build (image_idx, category) queries for GT-present categories
     queries = []
