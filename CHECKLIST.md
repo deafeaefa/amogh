@@ -44,7 +44,8 @@ Living checklist for the whole paper. Ticked items are done and verified.
 - [x] Week 3: **GCQ vs controls — CORE CLAIM ESTABLISHED**: GCQ B=4.25 = 86.6% (+2.1 over uniform W4) vs random-promotion mean 84.87% (+0.37, 3 seeds) at IDENTICAL 88.1M-param budget — ~5–6× the random effect; B=4.5 = 87.3% (64% of loss recovered, monotonic budget curve); **VQA constraint passed with margin (78.4 vs baseline 78.0 — GCQ slightly HELPS VQA)**
 - [x] Week 3: H3 verdict (honest): partial recovery — 48%/64% at +6%/+12.5% LLM memory; 90% bar not reached training-free at ≤4.5 bits → GCL fine-tune remains the pre-registered escalation for the full paper
 - [x] Week 3: **A1 ρ RESULT — Spearman ρ(grounding-sens, VQA-sens) = 0.001 across 56 groups; top-7 overlap = 0/7** — the two capability maps are statistically independent (grounding: mid-network attention band; VQA: early network). "Localization sensitivity ≠ general sensitivity" is empirical fact; H2 confirmed at maximum strength
-- [ ] Week 3: VQA-driven allocation control evals (RUNNING — on REC and on VQA; closes A1's allocation comparison)
+- [x] Week 3: **A2 allocation-policy comparison COMPLETE** at matched 88.1M-param budget: grounding-driven 86.6 > VQA-driven 85.1 > random 84.9 > uniform 84.5 — the capability you profile is the capability you protect; VQA-driven ≈ random for grounding, as ρ=0.001 predicted
+- [x] Week 3: symmetric check — VQA-driven-on-VQA 78.60 (+0.65) vs grounding-driven-on-VQA 78.41 (+0.46): each capability is best protected by its own map; full cross-matrix consistent with ρ=0.001
 - [ ] Week 3: proxy validation via promote-one decoded REC (allocation-level validation already implicit in GCQ-vs-random)
 - [ ] Week 2: full measurement grid {RTN,GPTQ,AWQ} × {W8,W4,W3} on frozen subsets
 - [ ] Week 2: floor-corrected retention + Figure 1
