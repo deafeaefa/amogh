@@ -27,9 +27,7 @@ Living checklist for the whole paper. Ticked items are done and verified.
 - [x] Week 0c: annotations downloaded + verified — RefCOCO/+/g via jxu124 HF mirror (UNC server is dead); split counts match published numbers exactly; **refcocog = umd split confirmed**; COCO-2014 annotations (232 MB); VQAv2 val Q+A; POPE random/popular/adversarial
 - [x] Week 0d: frozen subsets built, seed 0 — eval 1k + D_dev 1k (image-disjoint, verified by assert), D_probe 512 (excludes all 6,549 cross-variant val/test images), VQA 5k; image manifest = 778 train2014 + 4,994 val2014
 - [x] Week 0e: git repo initialized in ~/GCQ; code + frozen subsets committed
-- [ ] Week 0f: subset images fetched (5,772 targeted images ≈ 1 GB instead of 19 GB of COCO zips — in progress)
-- [ ] Week 0g: ODinW slice (deferred to Week 4 per plan)
-- [x] Week 0f: subset images fetched — all 5,772, zero failures, 880 MB
+- [x] Week 0f: subset images fetched — all 5,772, zero failures, 880 MB (+423 VQA-probe images later)
 - [x] Week 1: eval harnesses written + sanity-validated — REC (acc@0.5, GIoU, parse-fail, size-stratified; sanity 32 samples: **84.4% acc, 0 parse failures** — plausible vs published 2B numbers) and VQA/POPE (soft accuracy, F1); per-sample JSONL + one-CSV-row-per-run logging
 - [x] Week 1: simulated RTN quantizer written (`quant_utils.py`) — groupwise symmetric, LLM blocks only, vision tower/embeddings/lm_head untouched; supports per-module promotion overrides (ready for Week-3 allocation)
 - [x] Week 1: **throughput bug found and fixed** — Qwen3-VL's vision patch-embed Conv3d (kernel==stride) hit a catastrophic cuDNN path (~4.5 s/image); replaced with its exact GEMM equivalent (`gcq_patches.py`): 140× prefill speedup, task metrics reproduce bit-for-bit-level (84.38% acc, ΔGIoU 0.0003, 0 parse fail); patch applied identically to ALL configs so comparisons are unaffected — document in paper's eval note
@@ -46,16 +44,11 @@ Living checklist for the whole paper. Ticked items are done and verified.
 - [x] Week 3: **A1 ρ RESULT — Spearman ρ(grounding-sens, VQA-sens) = 0.001 across 56 groups; top-7 overlap = 0/7** — the two capability maps are statistically independent (grounding: mid-network attention band; VQA: early network). "Localization sensitivity ≠ general sensitivity" is empirical fact; H2 confirmed at maximum strength
 - [x] Week 3: **A2 allocation-policy comparison COMPLETE** at matched 88.1M-param budget: grounding-driven 86.6 > VQA-driven 85.1 > random 84.9 > uniform 84.5 — the capability you profile is the capability you protect; VQA-driven ≈ random for grounding, as ρ=0.001 predicted
 - [x] Week 3: symmetric check — VQA-driven-on-VQA 78.60 (+0.65) vs grounding-driven-on-VQA 78.41 (+0.46): each capability is best protected by its own map; full cross-matrix consistent with ρ=0.001
-- [ ] Week 3: proxy validation via promote-one decoded REC (allocation-level validation already implicit in GCQ-vs-random)
-- [ ] Week 2: full measurement grid {RTN,GPTQ,AWQ} × {W8,W4,W3} on frozen subsets
-- [ ] Week 2: floor-corrected retention + Figure 1
-- [ ] Week 3: sensitivity profiling (56 promote-one configs, coordinate-KL proxy)
-- [ ] Week 3: proxy validation (Spearman ρ vs decoded REC on 8–10 modules; kill criterion)
-- [ ] Week 3: greedy allocation at B=4.25 + GCQ checkpoint + paired VQA/POPE constraint check
-- [ ] Week 4: equal-memory controls (random ×3, VQA-driven, uniform)
-- [ ] Week 4: A1 Spearman ρ (grounding vs VQA sensitivity — the scientific heart)
-- [ ] Week 4: held-out ODinW-13 (touched once, at the end)
-- [ ] Week 4: full testA/testB runs for headline configs only
+- [ ] Week 3: proxy validation via promote-one decoded REC (RUNNING — 9 modules spanning s_m range, 500-sample decoded each; allocation-level validation already implicit in GCQ-vs-random)
+- [ ] Week 2/4: GPTQ/AWQ arm of the grid (blocked on gptqmodel import shim) + W4A8 stress
+- [ ] Week 4: Figure 1 (retention curves) + Figure 2 (sensitivity map) rendered from results.csv/sensitivity.csv
+- [ ] Week 4: ODinW-13 held-out slice (download + eval, touched once)
+- [ ] Week 4: full testA/testB runs for headline configs (BF16, W4, GCQ 4.25/4.5)
 
 ## Rigor gates (must all hold before submission)
 - [x] Novelty claims hedged ("first *systematic*", "to our knowledge") and GWQ (2411.00850) cited — verified against arXiv

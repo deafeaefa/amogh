@@ -92,11 +92,16 @@ where $C$ is the set of coordinate-token positions in the teacher-forced target 
 
 \begin{figure}[t]
   \centering
-  \fbox{\parbox[c][4.2cm][c]{0.46\linewidth}{\centering \todo{Figure 1: grounding-gap curves\\ $R'_{\text{grounding}}$ vs.\ $R'_{\text{VQA}}$ across bit-widths, per method}}}
-  \hfill
-  \fbox{\parbox[c][4.2cm][c]{0.46\linewidth}{\centering \todo{Figure 2: localization-sensitivity map\\ $s_m$ by depth, attention vs.\ MLP, VQA overlay}}}
-  \caption{\todo{(left) The grounding gap. (right) Where localization lives.}}
+  \includegraphics[width=\linewidth]{fig1_retention.pdf}
+  \caption{\textbf{Preliminary measurements (RTN, Qwen3-VL-2B).} (a) Floor-corrected retention: capabilities degrade proportionally at W4 and collapse together at W3 --- no pruning-style grounding-first asymmetry; GCQ (diamonds) recovers grounding at small extra memory. (b) At an identical $+88$M-parameter budget, grounding-driven allocation recovers $5$--$6\times$ more grounding than random or VQA-driven promotion.}
   \label{fig:main}
+\end{figure}
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\linewidth]{fig2_sensitivity.pdf}
+  \caption{\textbf{Capability sensitivity maps are independent} (Spearman $\rho = 0.001$, top-7 overlap $0/7$). Grounding sensitivity (top) concentrates in a mid-network attention band (layers 10--17); VQA sensitivity (bottom) concentrates early and is larger in magnitude; the most grounding-critical module (layer-15 attention) is \emph{negative} for VQA.}
+  \label{fig:sens}
 \end{figure}
 
 \begin{table}[t]
