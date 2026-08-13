@@ -47,7 +47,7 @@ Living checklist for the whole paper. Ticked items are done and verified.
 - [x] Week 3: proxy validation — honest verdict: per-module decoded effects (~0.3 pts) are below decoded noise at n=500 (rank ρ uninformative over 9 modules); proxy validity rests on the allocation-level control comparison (pre-registered acceptance rule); limitation updated in main.tex
 - [ ] Week 2/4: GPTQ/AWQ arm of the grid (blocked on gptqmodel import shim) + W4A8 stress
 - [x] Week 4: Figures 1+2 rendered from real data (CVD-safe Okabe-Ito, visually inspected, collision-fixed) and wired into main.tex — includes the bonus finding that layer-15 attention is grounding-critical but VQA-negative
-- [ ] Week 4: ODinW-13 held-out slice (download + eval, touched once)
+- [x] Week 4: **ODinW-13 held-out — GENERALIZATION CONFIRMED**: BF16 F1 0.654 / W4 0.582 (−11% rel.) / GCQ-4.25 0.626 (**61% of OOD loss recovered, zero ODinW in selection**); also refines the asymmetry story: OOD multi-object detection degrades 2× more than in-domain REC (11% vs 5%)
 - [ ] Week 4: full testA/testB runs for headline configs (BF16, W4, GCQ 4.25/4.5)
 
 ## Rigor gates (must all hold before submission)
