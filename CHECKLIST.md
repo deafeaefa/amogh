@@ -44,7 +44,7 @@ Living checklist for the whole paper. Ticked items are done and verified.
 - [x] Week 3: **A1 ρ RESULT — Spearman ρ(grounding-sens, VQA-sens) = 0.001 across 56 groups; top-7 overlap = 0/7** — the two capability maps are statistically independent (grounding: mid-network attention band; VQA: early network). "Localization sensitivity ≠ general sensitivity" is empirical fact; H2 confirmed at maximum strength
 - [x] Week 3: **A2 allocation-policy comparison COMPLETE** at matched 88.1M-param budget: grounding-driven 86.6 > VQA-driven 85.1 > random 84.9 > uniform 84.5 — the capability you profile is the capability you protect; VQA-driven ≈ random for grounding, as ρ=0.001 predicted
 - [x] Week 3: symmetric check — VQA-driven-on-VQA 78.60 (+0.65) vs grounding-driven-on-VQA 78.41 (+0.46): each capability is best protected by its own map; full cross-matrix consistent with ρ=0.001
-- [ ] Week 3: proxy validation via promote-one decoded REC (RUNNING — 9 modules spanning s_m range, 500-sample decoded each; allocation-level validation already implicit in GCQ-vs-random)
+- [x] Week 3: proxy validation — honest verdict: per-module decoded effects (~0.3 pts) are below decoded noise at n=500 (rank ρ uninformative over 9 modules); proxy validity rests on the allocation-level control comparison (pre-registered acceptance rule); limitation updated in main.tex
 - [ ] Week 2/4: GPTQ/AWQ arm of the grid (blocked on gptqmodel import shim) + W4A8 stress
 - [x] Week 4: Figures 1+2 rendered from real data (CVD-safe Okabe-Ito, visually inspected, collision-fixed) and wired into main.tex — includes the bonus finding that layer-15 attention is grounding-critical but VQA-negative
 - [ ] Week 4: ODinW-13 held-out slice (download + eval, touched once)
