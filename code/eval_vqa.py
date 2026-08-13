@@ -10,6 +10,7 @@ Usage:
 """
 import os, re, json, csv, time, argparse
 import torch
+import gcq_patches; gcq_patches.apply_fast_patch_embed()
 from transformers import AutoModelForImageTextToText, AutoProcessor
 from PIL import Image
 

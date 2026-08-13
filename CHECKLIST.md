@@ -32,8 +32,9 @@ Living checklist for the whole paper. Ticked items are done and verified.
 - [x] Week 0f: subset images fetched — all 5,772, zero failures, 880 MB
 - [x] Week 1: eval harnesses written + sanity-validated — REC (acc@0.5, GIoU, parse-fail, size-stratified; sanity 32 samples: **84.4% acc, 0 parse failures** — plausible vs published 2B numbers) and VQA/POPE (soft accuracy, F1); per-sample JSONL + one-CSV-row-per-run logging
 - [x] Week 1: simulated RTN quantizer written (`quant_utils.py`) — groupwise symmetric, LLM blocks only, vision tower/embeddings/lm_head untouched; supports per-module promotion overrides (ready for Week-3 allocation)
-- [ ] Week 1: BF16 baselines + image-blind floor runs (RUNNING — 3 GPU chains in parallel)
-- [ ] Week 1: first W4 quantized eval → first grounding-gap datapoint (RUNNING — W4-RTN queued in same chains; GPTQ checkpoint to follow)
+- [x] Week 1: **throughput bug found and fixed** — Qwen3-VL's vision patch-embed Conv3d (kernel==stride) hit a catastrophic cuDNN path (~4.5 s/image); replaced with its exact GEMM equivalent (`gcq_patches.py`): 140× prefill speedup, task metrics reproduce bit-for-bit-level (84.38% acc, ΔGIoU 0.0003, 0 parse fail); patch applied identically to ALL configs so comparisons are unaffected — document in paper's eval note
+- [ ] Week 1: BF16 baselines + floors (RUNNING — 4-GPU chains: REC/VQA/POPE/grid, batch 32)
+- [ ] Week 1: first W4 quantized eval → first grounding-gap datapoint (RUNNING — W4-RTN second in each chain; W3 third — gap + aggressive width tonight)
 - [ ] Week 2: full measurement grid {RTN,GPTQ,AWQ} × {W8,W4,W3} on frozen subsets
 - [ ] Week 2: floor-corrected retention + Figure 1
 - [ ] Week 3: sensitivity profiling (56 promote-one configs, coordinate-KL proxy)
