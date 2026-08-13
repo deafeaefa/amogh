@@ -15,7 +15,7 @@ Living checklist for the whole paper. Ticked items are done and verified.
 - [x] Compute/feasibility updated to real numbers (~60–75 GPU-h, 4-week solo plan)
 - [x] LaTeX paper started: `paper/main.tex` — all sections ported, compiles with or without official style file
 - [x] Official `neurips_2026.sty` acquired (GitHub mirror of official template; environ/trimspaces deps vendored from CTAN); paper compiles with ZERO errors under official style; main body currently ~5.8 pages → compression pass next
-- [ ] Fill bibliography TODOs (author lists for recent preprints)
+- [x] Bibliography complete — all 18 entries with real authors/titles verified via arXiv API (incl. correcting "LiteLVLM" to its actual title)
 - [x] Preliminary results inserted: real Table 1 + findings paragraph + Figures 1-2 (paper compiles, 7 draft pages pre-compression)
 - [x] Figure 2 done (ahead of schedule — was camera-ready item)
 - [x] Compressed to exactly 5 pages under official neurips_2026.sty (page 6 = refs/disclosure/appendix; 0 errors); science content fully preserved
