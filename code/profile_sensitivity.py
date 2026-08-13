@@ -40,6 +40,7 @@ def main():
     ap.add_argument("--limit", type=int, default=512)
     ap.add_argument("--batch", type=int, default=16)
     ap.add_argument("--out", default="sensitivity.csv")
+    ap.add_argument("--base-ckpt", default="", help="profile from this quant-dequant checkpoint as the base (e.g. GPTQ-W4) instead of in-memory RTN")
     args = ap.parse_args()
 
     data_dir = os.environ["GCQ_DATA"]; runs_dir = os.environ["GCQ_RUNS"]
@@ -66,6 +67,14 @@ def main():
     print(f"{len(keys)} module-groups total; profiling {len(sel)}: {sel[0]}..{sel[-1]}")
 
     cpu_copy = {n: m.weight.detach().cpu().clone() for k in keys for n, m in groups[k]}
+    base_copy = None
+    if args.base_ckpt:
+        import glob
+        from safetensors.torch import load_file
+        sd = {}
+        for f in glob.glob(os.path.join(args.base_ckpt, "*.safetensors")): sd.update(load_file(f))
+        base_copy = {n: sd[n + ".weight"] for k in keys for n, m in groups[k]}
+        print(f"base = checkpoint {args.base_ckpt} ({len(base_copy)} linears)")
 
     # ---- build teacher-forced batches and coordinate-token indices ----
     batches = []
@@ -141,8 +150,11 @@ def main():
     def set_bits(key, bits):
         for n, m in groups[key]:
             with torch.no_grad():
-                m.weight.copy_(cpu_copy[n].to(m.weight.device))
-                if bits: rtn_quant_tensor_(m.weight, bits, 128)
+                if base_copy is not None and bits == 4:
+                    m.weight.copy_(base_copy[n].to(m.weight.device))  # checkpoint base (e.g. GPTQ-4)
+                else:
+                    m.weight.copy_(cpu_copy[n].to(m.weight.device))
+                    if bits: rtn_quant_tensor_(m.weight, bits, 128)
 
     # ---- base: everything W4 ----
     for k in keys: set_bits(k, 4)
