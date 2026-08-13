@@ -145,24 +145,24 @@ where $C$ is the set of coordinate-token positions in the teacher-forced target 
 \paragraph{Feasibility and deliverables.} Everything is forward-only and demonstrably cheap: the entire preliminary campaign above consumed ${\sim}$30 single-researcher GPU-hours; the remainder (GPTQ/AWQ, W4A8) fits the original ${\sim}$60--75 GPU-hour envelope on public data. Deliverables: the measurements, the sensitivity maps, the recipe with code, and a checkpoint \emph{whose model card reports grounding} --- modeling the reporting practice we recommend.
 
 \begin{thebibliography}{20}\small
-\bibitem{qwen3vl} Qwen Team. Qwen3-VL technical report. arXiv:2511.21631.
-\bibitem{feather} Endo et al. FEATHER: token pruning and localization. arXiv:2412.13180, ICCV 2025.
-\bibitem{nuwa} N\"uwa: retention asymmetry under visual-token reduction. arXiv:2602.02951. \todo{authors}
-\bibitem{litelvlm} LiteLVLM. arXiv:2605.13178. \todo{authors}
-\bibitem{focusui} FocusUI. arXiv:2601.03928. \todo{authors}
-\bibitem{mbq} MBQ: modality-balanced quantization for large vision-language models. arXiv:2412.19509, CVPR 2025.
-\bibitem{qvlm} Q-VLM: post-training quantization for large vision-language models. arXiv:2410.08119, NeurIPS 2024.
-\bibitem{vlmq} VLMQ. arXiv:2508.03351. \todo{authors}
-\bibitem{luq} LUQ. arXiv:2509.23729. \todo{authors}
-\bibitem{speedq} SPEED-Q. arXiv:2511.08914. \todo{authors}
-\bibitem{gwq} GWQ: gradient-aware weight quantization for large language models. arXiv:2411.00850.
-\bibitem{qwen3quant} An empirical study of Qwen3 quantization. arXiv:2505.02214.
-\bibitem{rethinkingsmall} Rethinking small VLM quantization (component-wise mixed precision on Jetson). arXiv:2607.08029. \todo{authors}
+\bibitem{qwen3vl} Bai et al. Qwen3-VL technical report. arXiv:2511.21631.
+\bibitem{feather} Endo et al. Feather the throttle: Revisiting visual token pruning for vision-language models. arXiv:2412.13180, ICCV 2025.
+\bibitem{nuwa} Huang et al. N\"uwa: Mending the spatial integrity torn by VLM token pruning. arXiv:2602.02951.
+\bibitem{litelvlm} Lee et al. CLIP tricks you: Training-free token pruning for efficient pixel grounding. arXiv:2605.13178.
+\bibitem{focusui} Ouyang et al. FocusUI: Efficient UI grounding via position-preserving visual token selection. arXiv:2601.03928.
+\bibitem{mbq} Li et al. MBQ: Modality-balanced quantization for large vision-language models. arXiv:2412.19509, CVPR 2025.
+\bibitem{qvlm} Wang et al. Q-VLM: Post-training quantization for large vision-language models. arXiv:2410.08119, NeurIPS 2024.
+\bibitem{vlmq} Xue et al. VLMQ: Token saliency-driven post-training quantization for vision-language models. arXiv:2508.03351.
+\bibitem{luq} Bhatnagar et al. LUQ: Layerwise ultra-low bit quantization for multimodal large language models. arXiv:2509.23729.
+\bibitem{speedq} Guo et al. SPEED-Q: Staged processing with enhanced distillation towards efficient low-bit quantization. arXiv:2511.08914.
+\bibitem{gwq} Shao et al. GWQ: Gradient-aware weight quantization for large language models. arXiv:2411.00850.
+\bibitem{qwen3quant} Zheng et al. An empirical study of Qwen3 quantization. arXiv:2505.02214.
+\bibitem{rethinkingsmall} Shin et al. Rethinking small VLM quantization: From component-wise analysis to hardware-aware deployment. arXiv:2607.08029.
 \bibitem{locdistill} Zheng et al. Localization distillation for dense object detection. arXiv:2102.12252.
-\bibitem{sqapvla} SQAP-VLA. arXiv:2509.09090. \todo{authors}
-\bibitem{groundingtokens} Grounding everything in tokens (coordinate-token CE vs.\ geometry). arXiv:2512.10554. \todo{authors}
-\bibitem{vehicledamage} 4-bit localization-failure report (applied vehicle-damage study). arXiv:2608.02470. \todo{authors}
-\bibitem{miniinternvl} Mini-InternVL. arXiv:2410.16261.
+\bibitem{sqapvla} Fang et al. SQAP-VLA: A synergistic quantization-aware pruning framework for vision-language-action models. arXiv:2509.09090.
+\bibitem{groundingtokens} Ren et al. Grounding everything in tokens for multimodal large language models. arXiv:2512.10554.
+\bibitem{vehicledamage} Hogale et al. Grounding agentic VLMs with dedicated segmentation for fine-grained vehicle damage assessment. arXiv:2608.02470.
+\bibitem{miniinternvl} Gao et al. Mini-InternVL: A flexible-transfer pocket multimodal model with 5\% parameters. arXiv:2410.16261.
 \end{thebibliography}
 
 \subsubsection*{LLM usage disclosure}
