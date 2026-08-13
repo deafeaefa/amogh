@@ -18,7 +18,7 @@ Living checklist for the whole paper. Ticked items are done and verified.
 - [ ] Fill bibliography TODOs (author lists for recent preprints)
 - [x] Preliminary results inserted: real Table 1 + findings paragraph + Figures 1-2 (paper compiles, 7 draft pages pre-compression)
 - [x] Figure 2 done (ahead of schedule — was camera-ready item)
-- [ ] Compress to ≤5 pages under the official style
+- [x] Compressed to exactly 5 pages under official neurips_2026.sty (page 6 = refs/disclosure/appendix; 0 errors); science content fully preserved
 - [ ] Final proofread pass (terminology: grounding/spatial precision consistent; all §-refs valid)
 
 ## Experiments (from plan-4-weeks.md)
