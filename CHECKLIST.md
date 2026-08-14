@@ -71,6 +71,6 @@ Living checklist for the whole paper. Ticked items are done and verified.
 - [ ] Post-submission: archive exact submitted PDF + code state (tag `submission-odi2026`)
 
 ## Post-deadline (Weeks 3–4 → camera-ready / full paper)
-- [ ] Complete results version of the paper (all figures/tables real)
+- [x] Complete results version of the paper (all figures/tables real) — 2026-08-13: both tables fully populated with measured numbers (28 cells + allocation table), zero placeholders; W4A8 ODinW re-run after catching silent no-A8 bug; W3 ODinW rows measured (0.000 both quantizers); body exactly 5pp
 - [ ] Code + frozen subsets + checkpoint released; model card includes grounding numbers
 - [ ] Notification Sept 29 → if accepted: poster + possible 15-min oral prep
