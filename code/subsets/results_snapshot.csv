@@ -80,3 +80,9 @@ gptqW3_odinw500s,Qwen/Qwen3-VL-2B-Instruct,odinw,P=0.0000 R=0.0000,1091,0.0000,,
 gcq_b425_pope,Qwen/Qwen3-VL-2B-Instruct,pope,"adversarial:acc=0.875,f1=0.865 popular:acc=0.890,f1=0.880 random:acc=0.898,f1=0.887",9000,0.8876,,,,,,False,285
 gcq_b45_odinw500s,Qwen/Qwen3-VL-2B-Instruct,odinw,P=0.7109 R=0.5701,1091,0.6328,,,,,,False,126
 gcqGPTQspec_odinw500s,Qwen/Qwen3-VL-2B-Instruct,odinw,P=0.6399 R=0.5555,1091,0.5947,,,,,,False,132
+gcqGPTQ_w3band_rec1k,/scratch/7183079.1.l40s/ckpts/gptqw3band,rec,rec_eval_refcoco_val_1k,1000,0.0000,-1.0000,1.0000,,,0.0,False,76
+gcqsmall_b425_rec1k,Qwen/Qwen3-VL-2B-Instruct,rec,rec_eval_refcoco_val_1k,1000,0.8640,0.7714,0.0010,,,0.864,False,66
+gcqGPTQ_w3band_vqa5k,/scratch/7183079.1.l40s/ckpts/gptqw3band,vqa,vqa,5000,0.4510,,,,,,False,268
+gcqsmall_b425_odinw500s,Qwen/Qwen3-VL-2B-Instruct,odinw,P=0.6875 R=0.5445,1091,0.6077,,,,,,False,123
+gcqRTN_w3band_rec1k,Qwen/Qwen3-VL-2B-Instruct,rec,rec_eval_refcoco_val_1k,1000,0.0000,-1.0000,1.0000,,,0.0,False,74
+gcqsmall_b425_vqa5k,Qwen/Qwen3-VL-2B-Instruct,vqa,vqa,5000,0.7815,,,,,,False,242
