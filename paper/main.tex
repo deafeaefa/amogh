@@ -1,9 +1,10 @@
 % GCQ — ODI 2026 Proposals-track submission (NeurIPS 2026 workshop)
 % Compile: pdflatex main.tex (twice for references)
-% NOTE: download the official NeurIPS 2026 style file (neurips_2026.sty) from
-% https://neurips.cc/Conferences/2026/PaperInformation/StyleFiles and place it
+% NOTE: uses the official NeurIPS 2026 style file (neurips_2026.sty) placed
 % next to this file. The \IfFileExists fallback below lets the draft compile
 % without it, but the SUBMITTED pdf must use the official style.
+% PEND markers = cells awaiting in-flight eval runs; a pre-compile check must
+% find zero PEND before delivery.
 
 \documentclass{article}
 
@@ -26,6 +27,7 @@
 \usepackage{hyperref}
 
 \newcommand{\bbox}{\texttt{bbox\_2d}}
+\newcommand{\PEND}{\textcolor{red}{\textbf{??}}}
 
 \title{GCQ: Measuring and Closing the Grounding Gap\\in Quantized Edge VLMs, Training-Free}
 
@@ -38,7 +40,7 @@
 \IfFileExists{neurips_2026.sty}{}{\fallbacknote}
 
 \begin{abstract}
-Vision-language models (VLMs) reach smartphones, robots, and embedded systems almost exclusively through post-training quantization---yet the capability edge deployment most depends on, precise spatial understanding, is the one nobody checks. Every major VLM quantization method is validated on VQA, OCR, and reasoning benchmarks alone; to our knowledge, no published work systematically measures what quantization does to \emph{visual grounding}---the ability to localize exactly where an object is, not just describe what is present. The risk is real: under token pruning localization collapses first (95\% VQA vs.\ 47\% grounding retention). This proposal asks one question: how do we keep precise spatial understanding and visual grounding intact while a VLM is quantized? We answer in two parts: the first systematic measurement of this ``grounding gap''---quantizing Qwen3-VL-2B across bit-widths and reporting grounding retention beside VQA retention---and one \textbf{training-free} fix: a forward-only probe finds which layers carry spatial precision, and only those stay at 8-bit ($\sim$6\% extra memory) in an otherwise standard 4-bit pipeline. Because nothing is retrained, restoring grounding cannot silently trade away VQA or chat ability; general capability is a pre-registered constraint throughout. The recipe is drop-in for existing quantization toolchains and doubles as an audit protocol for any quantized VLM; the released sensitivity maps and detection-in-the-loop protocol establish capability-aware compression as a measurable problem extending well beyond grounding.
+Vision-language models (VLMs) reach phones, robots, and embedded systems almost exclusively through post-training quantization---yet the capability edge deployment usually exists for---precise spatial grounding---is the one nobody measures: every major VLM quantization method validates on VQA, OCR, and reasoning alone. We present the first systematic measurement of what quantization does to visual grounding, quantizing Qwen3-VL-2B across bit-widths, quantizers, and activation settings, and scoring grounding beside VQA and hallucination against image-blind floors. Three findings tell one story. \textbf{(1) The damage is real but hides:} at 4-bit, aggregate benchmarks degrade proportionally, but held-out detection stratified by object size reveals a fine-spatial-precision gradient---small-object recall $-53$\%, large-object unchanged---invisible to every standard benchmark; at GPTQ 3-bit, grounding dies outright (0\% parseable boxes) while VQA partially survives. \textbf{(2) The damage is mappable:} a forward-only promote-one-module probe localizes grounding sensitivity in a mid-network attention band, uncorrelated with the VQA sensitivity map ($\rho=0.001$) and specific to the deployed quantizer ($\rho=0.08$). \textbf{(3) The damage is cheaply recoverable, training-free:} promoting the band to 8-bit ($+6$\% LLM weight memory) buys back half the lost grounding, beats random and VQA-driven allocation at identical memory, transfers to held-out detection, and leaves VQA unharmed. Because nothing is retrained, the recovery cannot silently trade away general capability; the recipe (GCQ) is drop-in for standard pipelines and doubles as an audit protocol: compressed-VLM releases should report grounding on the model card.
 \end{abstract}
 
 \section{Introduction}
@@ -52,25 +54,25 @@ That is a threefold gap --- no systematic \emph{measurement} of grounding under 
   \item \textbf{An evaluation-protocol claim.} Every pipeline selection is made on grounding metrics with VQA as a constraint, inverting standard practice---and compressed-VLM releases should report grounding on the model card.
 \end{enumerate}
 
-We call the recipe \textbf{GCQ} (grounding-consistent quantization): one model, one intervention, one protocol---and no training anywhere. Training-free by design: a fine-tune can restore grounding by quietly trading away VQA (LoRA alone hurts grounding~\cite{miniinternvl}); a training-free pipeline cannot, and its residual channels are tracked by an explicit constraint.
+We call the recipe \textbf{GCQ} (grounding-consistent quantization): one model, one intervention, one protocol---and no training anywhere. Training-free by design: a fine-tune can restore grounding by quietly trading away VQA (LoRA alone hurts grounding~\cite{miniinternvl}); a training-free pipeline cannot.
 
 \section{Background and related work}
 
-\paragraph{The asymmetry is documented---for pruning.} FEATHER~\cite{feather} showed that visual-token pruning leaves most benchmarks intact while localization accuracy decays roughly linearly to zero, and that popular benchmarks fail to detect this because they require minimal grounding. N\"uwa~\cite{nuwa} quantified the asymmetry at 95\% VQA retention vs.\ 47.2\% grounding retention under 88.9\% token reduction; further pruning studies report the same fragility for pixel and UI grounding~\cite{litelvlm,focusui} (figures from recent preprints; re-verified before submission). The mechanism is intuitive: a correct box needs a preserved spatial reference frame and fine positional detail; ``what color is the dog'' does not.
+\paragraph{The asymmetry is documented---for pruning.} FEATHER~\cite{feather} showed that visual-token pruning leaves most benchmarks intact while localization accuracy decays roughly linearly to zero, and that popular benchmarks fail to detect this because they require minimal grounding. N\"uwa~\cite{nuwa} quantified the asymmetry at 95\% VQA retention vs.\ 47.2\% grounding retention under 88.9\% token reduction; further pruning studies report the same fragility for pixel and UI grounding~\cite{litelvlm,focusui}. The mechanism is intuitive: a correct box needs a preserved spatial reference frame and fine positional detail; ``what color is the dog'' does not.
 
-\paragraph{For quantization, nobody has looked systematically.} The VLM PTQ literature evaluates exclusively on VQA/OCR/chart/doc/reasoning; MBQ~\cite{mbq} frames sensitivity as a \emph{modality} issue, not a \emph{capability} issue---no existing method asks which layers carry \emph{localization}. Direct evidence is two isolated datapoints pointing in opposite directions: GWQ's incidental near-lossless RefCOCO table at ${\sim}4.6$ bits with FP16 outliers retained~\cite{gwq}, vs.\ an applied study's 4-bit Qwen-VL that classifies damage correctly but ``fail[s] consistently'' to localize it~\cite{vehicledamage}. The Qwen3 family is known to degrade steeply at $\le$3 bits~\cite{qwen3quant}; the closest mixed-precision line is component-wise vision/LLM allocation evaluated on MME only~\cite{rethinkingsmall}; SQAP-VLA~\cite{sqapvla} protects visual \emph{input} tokens for robot policies; MODE~\cite{mode} allocates MoE expert bits by modality. The closest allocation prior, TAQ~\cite{taq}, conditions per-layer precision on \emph{tasks} --- but for text-only LLMs; no work allocates by \emph{capability} in a VLM.
+\paragraph{For quantization, nobody has looked systematically.} The VLM PTQ literature evaluates exclusively on VQA/OCR/chart/doc/reasoning; MBQ~\cite{mbq} frames sensitivity as a \emph{modality} issue, not a \emph{capability} issue---no existing method asks which layers carry \emph{localization}. Direct evidence is two isolated datapoints pointing in opposite directions: GWQ's incidental near-lossless RefCOCO table at ${\sim}4.6$ bits with FP16 outliers retained~\cite{gwq}, vs.\ an applied study's 4-bit Qwen-VL that classifies damage correctly but ``fail[s] consistently'' to localize it~\cite{vehicledamage}. The Qwen3 family is known to degrade steeply at $\le$3 bits~\cite{qwen3quant}; component-wise vision/LLM bit allocation is evaluated on MME only~\cite{rethinkingsmall}, SQAP-VLA~\cite{sqapvla} protects visual \emph{input} tokens, and MODE~\cite{mode} allocates expert bits by modality. The closest allocation prior, TAQ~\cite{taq}, conditions per-layer precision on \emph{tasks} --- but for text-only LLMs; no work allocates by \emph{capability} in a VLM.
 
 \paragraph{Why Qwen3-VL-2B.} Qwen3-VL~\cite{qwen3vl} trains grounding natively and emits coordinates as plain text in a normalized $[0,1000]$ system, and the 2B is edge-realistic (${\sim}1.5$\,GB at W4; we write WxAy for $x$-bit weights, $y$-bit activations). Following~\cite{rethinkingsmall}, the vision tower stays at BF16/INT8; all aggressive quantization targets the LLM.
 
 \section{Measuring the grounding gap}
 
-\paragraph{Pipeline overview.} (1) Freeze hygienic evaluation subsets; (2) quantize the LLM (RTN/GPTQ at W8/W4/W3; W4A8 stress); (3) score grounding, VQA, and hallucination from \emph{decoded} outputs against image-blind floors; (4) profile per-module capability sensitivity with promote-one probes; (5) allocate extra precision greedily under a memory budget; (6) verify against matched-memory random and VQA-driven controls, a held-out OOD set, and full test splits.
+\paragraph{Pipeline overview.} Freeze hygienic evaluation subsets; quantize the LLM (RTN/GPTQ, W8--W3, W4A8 stress); score grounding, VQA, and hallucination from \emph{decoded} outputs against image-blind floors; profile per-module sensitivity with promote-one probes; allocate extra precision greedily under a memory budget; verify against matched-memory controls, a held-out OOD set, and full test splits.
 
-\paragraph{Setup and data hygiene.} Reference model $=$ Qwen3-VL-2B-Instruct at BF16; quantized model $=$ the same with quantized LLM weights. $D_{\text{probe}}$: ${\sim}512$ RefCOCO-train samples in the chat template, used only for sensitivity profiling (\S\ref{sec:method}). $D_{\text{dev}}$: 1{,}000 RefCOCO-val samples, used \emph{only} for selection---never for calibration or profiling. Reported RefCOCO-val numbers exclude the $D_{\text{dev}}$ samples; the ODinW-13 evaluation set is never touched by calibration, profiling, or selection; so probe, selection, and reported test data are strictly disjoint. RefCOCOg uses the umd split (the google split leaks images between train and val), and $D_{\text{probe}}$ excludes any image appearing in the val/test splits of \emph{any} RefCOCO variant, since the three variants draw on overlapping COCO images.
+\paragraph{Setup and data hygiene.} Reference model $=$ Qwen3-VL-2B-Instruct at BF16; quantized model $=$ the same with quantized LLM weights. $D_{\text{probe}}$: ${\sim}512$ RefCOCO-train samples in the chat template, used only for sensitivity profiling (\S\ref{sec:method}). $D_{\text{dev}}$: 1{,}000 RefCOCO-val samples, used \emph{only} for selection---never for calibration or profiling. Reported RefCOCO-val numbers exclude the $D_{\text{dev}}$ samples; the ODinW-13 evaluation set is never touched by calibration, profiling, or selection; so probe, selection, and reported test data are strictly disjoint. RefCOCOg uses the leak-free umd split, and $D_{\text{probe}}$ excludes every image appearing in any RefCOCO variant's val/test splits (the variants draw on overlapping COCO images).
 
-\paragraph{Evaluation pipeline.} Each REC sample is one image plus one chat-template query---``Locate the \{expression\}, output its \bbox{} in JSON''---decoded greedily ($\le$64 new tokens). The emitted JSON is parsed (regex fallback), mapped $[0,1000] \to$ pixels, and scored by IoU against the ground-truth box: correct at IoU $\ge 0.5$; mean GIoU recorded. Unparseable outputs count as wrong; the parse-failure rate is reported separately (quantization can break the output format itself). The three RefCOCO variants stress different skills (RefCOCO: spatial language; RefCOCO+: attributes only; RefCOCOg: sentence-length descriptions). For ODinW-13, one category per prompt (``locate every \{class\}''), greedy IoU matching, precision/recall@0.5. REC accuracy is additionally stratified by ground-truth box size, where degradation is expected to concentrate.
+\paragraph{Evaluation pipeline.} Each REC sample is one image plus one chat-template query---``Locate the \{expression\}, output its \bbox{} in JSON''---decoded greedily ($\le$64 new tokens). The emitted JSON is parsed (regex fallback), mapped $[0,1000] \to$ pixels, and scored by IoU against the ground-truth box: correct at IoU $\ge 0.5$; mean GIoU recorded. Unparseable outputs count as wrong; the parse-failure rate is reported separately (quantization can break the output format itself). For ODinW-13, one category per prompt (``locate every \{class\}''), greedy IoU matching, precision/recall@0.5. REC accuracy is additionally stratified by ground-truth box size, where degradation is expected to concentrate.
 
-\paragraph{Detection in the loop.} Every choice a compression pipeline normally makes by perplexity or VQA---group size, bit budget, which modules get promoted---is made here by $D_{\text{dev}}$ grounding metrics (REC acc@0.5 $+$ mean GIoU vs.\ ground-truth boxes). General capability is a \emph{constraint}: VQA and hallucination scores must stay within a pre-registered tolerance (1.5 points) of the same-method text-calibrated quantized baseline, checked by a paired test on a fixed ${\sim}$5k-item VQAv2 subset and POPE. This inversion is itself a claim: the field's selection signal has been blind to detection.
+\paragraph{Detection in the loop.} Every choice a compression pipeline normally makes by perplexity or VQA---group size, bit budget, which modules get promoted---is made here by $D_{\text{dev}}$ grounding metrics (REC acc@0.5 $+$ mean GIoU). General capability is a \emph{constraint}: VQA and hallucination scores must stay within a pre-registered tolerance (1.5 points) of the same-method text-calibrated quantized baseline, checked on the fixed VQAv2 and POPE subsets. This inversion is itself a claim: the field's selection signal has been blind to detection.
 
 \section{GCQ: localization-sensitivity-guided mixed precision}
 \label{sec:method}
@@ -82,72 +84,87 @@ s_m \;=\; \mathrm{KL}_{\text{base}} - \mathrm{KL}_{+m}, \qquad
 \end{equation}
 where $C$ is the set of coordinate-token positions in the teacher-forced target (the tokens covering digits, commas, and brackets inside \bbox{} arrays; well-defined under multi-digit tokenizer merges). This measures exactly the marginal utility the greedy allocator consumes, at the deployment operating point. The proxy is validated before it is trusted---token-level agreement correlates imperfectly with geometric error~\cite{groundingtokens}---by rank-correlating $s_m$ against decoded REC gains from the same promotions on a module subset; if correlation is poor, profiling falls back to direct decoded REC on a smaller probe.
 
-\paragraph{Step 2---allocation (greedy, two-tier).} Given an average-bits budget $B$, promote the module with the highest $s_m$ per extra byte to 8-bit until the budget is exhausted; embeddings and \texttt{lm\_head} stay 8-bit always (they carry the digit vocabulary). The arithmetic, stated honestly: at $B=4.25$ the budget promotes ${\sim}88$M of the 2B's ${\sim}1.4$B quantizable parameters---about 7 attention modules, or 2--3 MLP modules, or a mix---costing ${\sim}{+}6\%$ of LLM weight memory (${\sim}$50--60\,MB) over uniform W4; $B=4.5$ doubles both. The allocation has only a handful of promotions of resolution: comparisons are between allocation \emph{policies} at matched memory. Known proxy--deployment gaps (per-module isolation, teacher forcing, RTN-for-profiling vs.\ GPTQ-final) are all bounded by one rule: no allocation is accepted on proxy numbers---every candidate is evaluated end-to-end on decoded $D_{\text{dev}}$ metrics; the proxy only orders the search.
+\paragraph{Step 2---allocation (greedy, two-tier).} Given an average-bits budget $B$, promote the module with the highest $s_m$ per extra byte to 8-bit until the budget is exhausted; embeddings and \texttt{lm\_head} stay 8-bit always (they carry the digit vocabulary). The arithmetic, stated honestly: at $B{=}4.25$ the budget promotes ${\sim}88$M of the ${\sim}1.4$B quantizable parameters (${\sim}{+}6\%$ LLM weight memory, ${\sim}$50--60\,MB, over uniform W4); $B{=}4.5$ doubles both; comparisons are always between allocation \emph{policies} at matched memory. Known proxy--deployment gaps (per-module isolation, teacher forcing, RTN-for-profiling vs.\ GPTQ-final) are all bounded by one rule: no allocation is accepted on proxy numbers---every candidate is evaluated end-to-end on decoded $D_{\text{dev}}$ metrics; the proxy only orders the search.
 
 \paragraph{What we deliberately do not do.} No calibration-set changes (gains attribute to allocation alone), no training of any kind, no learned allocator, no architecture, tokenizer, or RL changes.
 
-\section{Experimental plan}
+\section{Results}
+\label{sec:results}
 
-\paragraph{Settings.} BF16 reference; W8A16, W4A16, W3A16 via RTN/GPTQ/AWQ; W4A8 as one stress condition; GCQ at $B \in \{4.25, 4.5\}$.
+\paragraph{Settings.} RTN and our validated GPTQ implementation, weight-only, groupwise symmetric $g{=}128$, LLM blocks only; W8/W4/W3; W4A8 adds simulated per-token dynamic 8-bit activations; GCQ at $B \in \{4.25, 4.5\}$. All rows share one evaluation pipeline on frozen seed-0 subsets (REC $n{=}1000$, VQAv2 $n{=}5000$, POPE $n{=}9000$, ODinW $n{=}500$ images). Because chance floors differ across benchmarks, retention is floor-corrected, $R' = (S - S_{\text{floor}})/(S_{\text{BF16}} - S_{\text{floor}})$, with floors measured by an image-blind pass (REC 3.0, VQAv2 36.8, POPE 50.0); absolute scores in the tables.
 
-\paragraph{Benchmarks and metrics.} Grounding (primary): RefCOCO/+/g REC acc@0.5 (val/testA/testB; val excludes $D_{\text{dev}}$) and mean GIoU; held-out ODinW-13 subset. General (constraint): VQAv2 subset $+$ POPE. Headline: retention $R = S_{\text{quant}}/S_{\text{BF16}}$ on accuracy-type metrics; because chance floors differ across benchmarks (POPE 50\%, VQA language-prior, REC ${\approx}0$), the headline figure uses floor-corrected $R' = (S_{\text{quant}} - S_{\text{floor}})/(S_{\text{BF16}} - S_{\text{floor}})$ with floors measured by an image-blind pass; raw $R$ and absolute deltas reported alongside.
+\begin{table}[t]
+  \centering
+  \caption{\textbf{The grounding gap across quantization settings.} Absolute scores; identical pipeline every row; ODinW-13 is held out from all calibration, profiling, and selection. W3 collapse and the grounding-first separation under GPTQ are analyzed in the text.}
+  \label{tab:gap}
+  \small
+  \begin{tabular}{llcccc}
+    \toprule
+    Setting & Avg bits & REC@0.5 & VQAv2 & POPE & ODinW F1 \\
+    \midrule
+    BF16 reference & 16 & 88.9 & 81.1 & 89.4 & 0.654 \\
+    RTN W8 & 8 & 88.7 & 81.3 & 89.4 & 0.661 \\
+    \midrule
+    RTN W4 & 4 & 84.5 & 78.0 & 88.8 & 0.582 \\
+    GPTQ W4 & 4 & 85.4 & 78.1 & 89.4 & \PEND \\
+    RTN W4A8 & 4 & 82.8 & 77.5 & \PEND & \PEND \\
+    \midrule
+    RTN W3 & 3 & 0.0 & 1.3 & 50.4 & \PEND \\
+    GPTQ W3 & 3 & 0.0 & 17.7 & \PEND & \PEND \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{table}[t]
+  \centering
+  \caption{\textbf{Allocation policy at matched memory} (avg $4.25$ bits $=$ uniform W4 $+$ ${\sim}88$M parameters promoted to 8-bit, $+6$\% LLM weight memory; $B{=}4.5$ doubles the premium). Same frozen subsets as Table~\ref{tab:gap}. Bottom block: the same recipe on GPTQ with a GPTQ-profiled map.}
+  \label{tab:alloc}
+  \small
+  \begin{tabular}{lccc}
+    \toprule
+    Policy (base quantizer RTN) & REC@0.5 & mean GIoU & VQAv2 \\
+    \midrule
+    Uniform W4 (no promotion) & 84.5 & 0.754 & 78.0 \\
+    Random promotion (3 seeds) & 84.9$\pm$0.3 & 0.758 & \PEND \\
+    VQA-sensitivity-driven & 85.1 & 0.764 & 78.6 \\
+    \textbf{GCQ (ours)} & \textbf{86.6} & \textbf{0.775} & \textbf{78.4} \\
+    \textbf{GCQ at $B{=}4.5$ (ours)} & \textbf{87.3} & \textbf{0.781} & \textbf{78.7} \\
+    \midrule
+    Uniform GPTQ-W4 & 85.4 & 0.745 & 78.1 \\
+    \textbf{GCQ on GPTQ (matched map)} & \textbf{85.5} & \textbf{0.768} & \PEND \\
+    \bottomrule
+  \end{tabular}
+\end{table}
 
 \begin{figure}[t]
   \centering
   \includegraphics[width=\linewidth]{fig1_retention.pdf}
-  \caption{\textbf{Preliminary measurements (RTN, Qwen3-VL-2B).} (a) Floor-corrected retention: capabilities degrade proportionally at W4 and collapse together at W3 --- no pruning-style grounding-first asymmetry; GCQ (diamonds) recovers grounding at small extra memory. (b) At an identical $+88$M-parameter budget, grounding-driven allocation recovers $5$--$6\times$ more grounding than random or VQA-driven promotion.}
+  \caption{\textbf{Measured retention and allocation (RTN, Qwen3-VL-2B).} (a) Floor-corrected retention: capabilities degrade proportionally at W4 and collapse together at W3 --- no pruning-style grounding-first asymmetry in the aggregate; GCQ (diamonds) recovers grounding at small extra memory. (b) At an identical $+88$M-parameter budget, grounding-driven allocation beats random (${\sim}5.7{\times}$ the recovery) and VQA-driven (${\sim}3.5{\times}$) promotion.}
   \label{fig:main}
 \end{figure}
 
 \begin{figure}[t]
   \centering
   \includegraphics[width=\linewidth]{fig2_sensitivity.pdf}
-  \caption{\textbf{Capability sensitivity maps are independent} (Spearman $\rho = 0.001$, top-7 overlap $0/7$). Grounding sensitivity (top) concentrates in a mid-network attention band (layers 10--17); VQA sensitivity (bottom) concentrates early and is larger in magnitude; the most grounding-critical module (layer-15 attention) is \emph{negative} for VQA.}
+  \caption{\textbf{Capability sensitivity maps are independent} (Spearman $\rho = 0.001$, top-7 overlap $0/7$). Grounding sensitivity (top) concentrates in a mid-network attention band (layers 10--17); VQA sensitivity (bottom) concentrates early; the most grounding-critical module (layer-15 attention) is \emph{negative} for VQA.}
   \label{fig:sens}
 \end{figure}
 
-\begin{table}[t]
-  \centering
-  \caption{\textbf{Preliminary results} (RTN weight-only; frozen seed-0 subsets, REC $n{=}1000$ / VQAv2 $n{=}5000$ / POPE $n{=}9000$; identical pipeline every row; image-blind floors 3.0/36.8/50.0).}
-  \label{tab:main}
-  \small
-  \begin{tabular}{lcccccc}
-    \toprule
-    Config & Avg bits & REC@0.5 & mean GIoU & VQAv2 & POPE acc & ODinW F1 \\
-    \midrule
-    BF16 reference & 16 & 88.9 & 0.797 & 81.1 & 89.4 & 0.654 \\
-    RTN W8 & 8 & 88.7 & 0.799 & -- & -- & -- \\
-    RTN W4 (uniform) & 4 & 84.5 & 0.754 & 78.0 & 88.8 & 0.582 \\
-    RTN W3 (uniform) & 3 & 0.0$^{\dagger}$ & -- & 1.3$^{\dagger}$ & 50.4$^{\dagger}$ & -- \\
-    RTN W4A8 (activation stress) & 4 & 82.8 & 0.734 & 77.5 & -- & -- \\
-    GPTQ W4 (ours, validated) & 4 & 85.4 & 0.745 & 78.1 & -- & -- \\
-    GPTQ W3 & 3 & \textbf{0.0}$^{\ddagger}$ & -- & 17.7$^{\ddagger}$ & -- & -- \\
-    Random promotion @4.25 (3 seeds) & 4.25 & 84.9$\pm$0.3 & 0.758 & -- & -- & -- \\
-    \textbf{GCQ on RTN (ours)} & \textbf{4.25} & \textbf{86.6} & \textbf{0.775} & \textbf{78.4} & -- & \textbf{0.626} \\
-    \textbf{GCQ on RTN (ours)} & \textbf{4.5} & \textbf{87.3} & \textbf{0.781} & -- & -- & -- \\
-    \textbf{GCQ on GPTQ (per-quantizer map)} & \textbf{4.25} & \textbf{85.5} & \textbf{0.768} & -- & -- & -- \\
-    \bottomrule
-  \end{tabular}\\[2pt]
-  {\scriptsize $^{\dagger}$Global model collapse under RTN (all capabilities die together). $^{\ddagger}$Under GPTQ the model half-survives W3 and the capabilities separate: \emph{grounding dies first} --- 0\% parseable boxes while VQA retains partial, semantically varied function (verified not a yes-bias).}
-\end{table}
+\paragraph{The gap is real, hidden by aggregate benchmarks, and fatal at 3 bits.} At W4 the aggregate metrics degrade roughly proportionally---floor-corrected retention POPE 98.4\% $>$ grounding 94.9\% $>$ VQA 92.8\% (Table~\ref{tab:gap}, Figure~\ref{fig:main}a)---no pruning-style asymmetry. But the aggregate hides a gradient: on held-out ODinW stratified by ground-truth box size, W4 costs $-53$\% small-object recall ($18.5 \to 8.7$), $-26$\% medium, and large objects are untouched. The asymmetry was never absent; it is \emph{invisible to large-object benchmarks}---and to VQA and POPE entirely. Out of domain the same damage is bigger: W4 loses 11\% of relative ODinW F1 vs.\ 5\% of in-domain REC accuracy. At 3 bits the capabilities separate outright: RTN-W3 collapses globally (every score at its floor), but GPTQ-W3 half-survives, and there \emph{grounding dies first}---0\% parseable boxes while VQA retains partial, semantically varied function (17.7; verified not a yes-bias). W8 is lossless on every metric; W4A8 costs a further $-1.7$ REC over weight-only W4. The W4 grounding damage replicates at $-5.1$ points on the disjoint selection set.
 
-\paragraph{Preliminary findings (completed).} Six results from the first measurement campaign (Table~\ref{tab:main}, Figures~\ref{fig:main} and~\ref{fig:sens}), all on the frozen subsets above. (1) \emph{No grounding-first asymmetry under weight-only RTN at W4}: floor-corrected retention is POPE 98.5\% $>$ grounding 94.9\% $>$ VQA 92.8\% --- capabilities degrade roughly proportionally, in contrast to token pruning's 95\%-vs-47\% asymmetry; grounding damage is nonetheless real ($-4.4$ points, replicated at $-5.1$ on the disjoint selection set). (2) \emph{Localization sensitivity is concentrated, not diffuse} (H2): the promote-one-module profile over all 56 module-groups peaks in a contiguous band of \emph{attention} modules in layers 10--17 of 28; MLPs lose every per-byte comparison at the B=4.25 budget --- converging with mechanistic evidence that localization is carried by a few attention heads in specific layer ranges~\cite{locheads,causalheads}. (3) \emph{Sensitivity-guided allocation works and is specific}: promoting the band to 8-bit ($+6.25$\% LLM weight memory) recovers 48\% of the lost grounding (84.5 $\to$ 86.6), $5$--$6\times$ the effect of random promotion at an \emph{identical} byte budget ($84.9 \pm 0.3$); B=4.5 recovers 64\%, monotonically. (4) \emph{The constraint holds with margin}: GCQ's VQAv2 is $+0.4$ \emph{above} the uniform-W4 baseline. (5) \emph{The band generalizes out-of-domain}: on a held-out ODinW-13 slice (500 images; aerial/thermal/web, never used in selection), uniform W4 loses 11\% of relative F1 (vs.\ 5\% of in-domain REC) and the RefCOCO-chosen allocation recovers \textbf{61\%} of it. (6) \emph{Everything replicates on the full official test splits} (testA/testB, $n{=}5657/5095$): 49--60\% recovery on testA, 32--43\% on the harder testB; the core effect is significant (paired bootstrap, testA $+1.84$ [1.29, 2.39]). (7) \emph{The pattern replicates across quantizers and activation quantization} (GPTQ-W4 and RTN-W4A8: both proportional) --- but at GPTQ-W3 the model half-survives and the capabilities finally separate: \emph{grounding dies first} (0\% parseable boxes vs.\ 17.7\% partial VQA function). (8) \emph{Sensitivity maps are quantizer-specific} ($\rho$(RTN map, GPTQ map) $=0.082$): allocation must be profiled on the deployed quantizer --- the mismatched map costs $-1.2$, the matched map restores parity and recovers 44\% of lost GIoU with zero parse failures; cruder quantizers convert placement into hit-rate, stronger ones into precision. (9) \emph{The damage is a fine-spatial-precision gradient} (held-out ODinW by ground-truth box size): at W4, small-object recall falls $18.5 \to 8.7$ ($-53\%$), medium $-26\%$, large $\pm0\%$ --- the asymmetry was never absent, it is \emph{invisible to large-object benchmarks} (explaining finding 1), and GCQ recovers 55--58\% of the small/medium loss. H3's $\ge$90\%-recovery bar is not reached training-free at $\le$4.5 bits; the pre-registered escalation (\S\ref{sec:method}) covers the remainder.
+\paragraph{The damage is mappable---and the map is capability- and quantizer-specific.} The promote-one-module profile over all 56 module-groups (Figure~\ref{fig:sens}) is concentrated, not diffuse: it peaks in a contiguous band of \emph{attention} modules in layers 10--17 of 28, and MLPs lose every per-byte comparison at the $B{=}4.25$ budget---converging with mechanistic evidence that localization is carried by a few attention heads in specific layer ranges~\cite{locheads,causalheads}. The VQA map is statistically unrelated (Spearman $\rho = 0.001$; top-7 module overlap $0/7$), so protecting grounding and protecting VQA are \emph{different} interventions. The map is also quantizer-specific ($\rho$ between RTN- and GPTQ-profiled maps $= 0.082$): transplanting the RTN map onto GPTQ \emph{costs} $-1.2$ REC with 2.8\% parse failures, while the matched GPTQ-profiled map restores parity, recovers 44\% of the lost GIoU, and has zero parse failures (Table~\ref{tab:alloc}, bottom). The prescription: profile on the quantizer you deploy.
 
-\paragraph{Consequences.} Practitioners: a stock 4-bit VLM has silently lost half its small-object detection --- audit before shipping (our harness is that audit); $+6\%$ well-placed memory buys half back at zero VQA cost. Toolchains: profile sensitivity on the deployed quantizer; report grounding on model cards. Research: capabilities are separable, mappable structures --- compression can become capability-aware, and the ${\sim}35\%$ residual ceiling is the target for recovery training.
+\paragraph{Well-placed bits buy grounding back---training-free.} At identical memory (Table~\ref{tab:alloc}), GCQ recovers $+2.1$ REC over uniform W4---48\% of the W4 grounding loss---versus $+0.4\pm0.3$ for random promotion and $+0.6$ for VQA-driven promotion; $B{=}4.5$ recovers 64\%, monotonically. The constraint holds with margin: GCQ's VQAv2 is $+0.4$ ($B{=}4.25$) and $+0.7$ ($B{=}4.5$) \emph{above} the uniform baseline. The RefCOCO-chosen band transfers out of domain: ODinW F1 $0.582 \to 0.626$, recovering 61\% of the held-out loss, with small/medium-object recall recovery of 55--58\%. Everything replicates on the full official test splits ($n{=}5657/5095$): 49--60\% recovery on testA, 32--43\% on the harder testB, significant under a paired bootstrap (testA $+1.84$, 95\% CI $[1.29, 2.39]$).
 
-\paragraph{Baselines and matched controls.} BF16; RTN/GPTQ/AWQ with standard text calibration (status quo); uniform W4; VQA-sensitivity-driven allocation at equal memory; random promotion at equal memory; GCQ. Equal-memory controls ensure any gain is attributable to \emph{where} the bits go, not how many there are.
+\paragraph{Consequences.} Practitioners: a stock 4-bit VLM has silently lost half its small-object detection---audit before shipping (our harness is that audit); $+6\%$ well-placed memory buys half back at zero VQA cost. Toolchains: profile sensitivity on the deployed quantizer; report grounding on model cards. Research: capabilities are separable, mappable structures---compression can become capability-aware, and the ${\sim}35$--$50\%$ residual is the target for recovery training.
 
-\paragraph{Ablations.} \textbf{A1} (sensitivity structure): Spearman $\rho$ between $s_m$ and per-module VQA sensitivity---do the two allocations differ? \textbf{A2} (allocation policy): grounding-driven vs.\ uniform vs.\ random vs.\ VQA-driven at matched average bits. \textbf{A3} (generalization): held-out ODinW-13 for an allocation chosen on RefCOCO.
+\section{Hypotheses, controls, and outcomes}
 
-\section{Hypotheses and pre-registered kill criteria}
+\paragraph{Pre-registered hypotheses, resolved.} \textbf{H1} (grounding trails VQA by $>$10 floor-corrected points at W4): \emph{refuted in the aggregate}---the gap is a size gradient plus a W3 grounding-first collapse, sharper claims than H1 anticipated. \textbf{H2} (sensitivity is structured and differs from VQA's): \emph{confirmed} ($\rho=0.001$, $0/7$ overlap). \textbf{H3} ($\ge$90\% recovery at $B\le4.5$): \emph{not reached}---48--64\%; the pre-registered escalation (distillation, deferred) covers the remainder. Reporting refuted and partial outcomes is deliberate: the measurement is the contribution, not the hypothesis.
 
-\textbf{H1 (measurement).} At W4---and clearly at W3 and W4A8---grounding retention trails VQA retention by $>$10 floor-corrected points.
-\textbf{H2 (structure).} $s_m$ is non-uniform and only partially correlated with VQA sensitivity, so grounding- and VQA-driven allocations differ materially.
-\textbf{H3 (method).} At the most aggressive setting where H1's gap manifests, grounding-driven allocation at $B \le 4.5$ recovers $\ge$90\% of the BF16 grounding lost by the uniform baseline (same quantizer, same calibration), within the 1.5-point VQA tolerance, at the stated ${\sim}$6--12\% LLM-weight-memory premium.
+\paragraph{Controls.} Matched memory for every allocation comparison; same calibration data and pipeline for every quantizer row; selection only on $D_{\text{dev}}$, disjoint from all reported numbers; held-out ODinW touched once; image-blind floors; parse failures reported separately so format breakage cannot masquerade as localization error.
 
-\paragraph{Kill criteria (pre-registered).} Every branch resolved; outcomes reported in findings (1)--(9). The ${\sim}65\%$ training-free ceiling motivates the deferred distillation escalation.
-
-\paragraph{Known limitations.} (i) $s_m$ is teacher-forced and per-module, so every accepted configuration is selected end-to-end on decoded metrics; proxy validity rests on the allocation-level controls. (ii) The novelty claim is \emph{to our knowledge} (closest: \cite{gwq,mbq,feather,nuwa,sqapvla,rethinkingsmall}). (iii) Single-model; preprint figures provisional. The forward-only campaign cost ${\sim}$50 GPU-hours; all artifacts will be released.
+\paragraph{Known limitations.} (i) $s_m$ is teacher-forced and per-module; proxy validity rests on the end-to-end decoded selection and allocation-level controls. (ii) The novelty claim is \emph{to our knowledge} (closest: \cite{gwq,mbq,feather,nuwa,sqapvla,rethinkingsmall}). (iii) Single-model study; the 4B/8B scale study is deferred. The campaign cost ${\sim}$50 GPU-hours; all artifacts (harness, sensitivity maps, promotion lists) will be released.
 
 \begin{thebibliography}{20}\small
 \bibitem{qwen3vl} Bai et al. Qwen3-VL technical report. arXiv:2511.21631.
@@ -179,6 +196,6 @@ A large language model was used as a writing and editing aid in preparing this p
 
 \appendix
 \section{Deferred to the full paper}
-Grounding-calibrated PTQ (with a three-arm attribution ablation separating grounding-specific calibration effects from generic multimodal-calibration effects); the coordinate-weighted distillation recovery~\cite{locdistill} for the residual 36--68\% of unrecovered grounding; the 4B/8B scale study; prompted-detection COCO AP with size-stratified reporting; finer bit-budget Pareto sweeps; on-device latency/memory export measurements.
+Grounding-calibrated PTQ (with a three-arm attribution ablation separating grounding-specific calibration effects from generic multimodal-calibration effects); the coordinate-weighted distillation recovery~\cite{locdistill} for the residual unrecovered grounding; the 4B/8B scale study; prompted-detection COCO AP with size-stratified reporting; finer bit-budget Pareto sweeps; on-device latency/memory export measurements.
 
 \end{document}
