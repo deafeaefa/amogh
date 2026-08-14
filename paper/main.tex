@@ -74,7 +74,7 @@ We call the recipe \textbf{GCQ} (grounding-consistent quantization): one model, 
 \section{GCQ: localization-sensitivity-guided mixed precision}
 \label{sec:method}
 
-\paragraph{Step 1---profiling (forward-only).} Profiling runs in the same direction the allocator spends: start from the \emph{fully quantized} model at the aggressive width (a standard text-calibrated GPTQ/AWQ checkpoint---the base PTQ pipeline is deliberately untouched), then for each LLM module $m$ (attention and MLP per block; ${\sim}2{\times}28 \approx 56$ modules on the 2B) promote \emph{only} $m$ to 8-bit and score the \emph{reduction} in grounding damage on $D_{\text{probe}}$ with a decoding-free proxy:
+\paragraph{Step 1---profiling (forward-only).} Profiling runs in the same direction the allocator spends: start from the \emph{fully quantized} model at the aggressive width (a standard text-calibrated checkpoint---the base PTQ pipeline is deliberately untouched), then for each LLM module $m$ (attention and MLP per block; ${\sim}2{\times}28 \approx 56$ modules on the 2B) promote \emph{only} $m$ to 8-bit and score the \emph{reduction} in grounding damage on $D_{\text{probe}}$ with a decoding-free proxy:
 \begin{equation}
 s_m \;=\; \mathrm{KL}_{\text{base}} - \mathrm{KL}_{+m}, \qquad
 \mathrm{KL}_{c} \;=\; \mathbb{E}_{D_{\text{probe}}}\Big[\textstyle\sum_{t \in C} \mathrm{KL}\big(p_{\text{ref}}(\cdot \mid x, y_{<t}) \,\|\, p_{c}(\cdot \mid x, y_{<t})\big)\Big],
