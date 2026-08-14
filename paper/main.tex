@@ -151,7 +151,7 @@ where $C$ is the set of coordinate-token positions in the teacher-forced target 
 
 \paragraph{Well-placed bits buy grounding back---training-free.} At identical memory (Table~\ref{tab:alloc}), GCQ recovers $+2.1$ REC over uniform W4---48\% of the W4 grounding loss---versus $+0.4\pm0.3$ for random promotion and $+0.6$ for VQA-driven promotion; $B{=}4.5$ recovers 64\%, monotonically. The constraint holds with margin: GCQ's VQAv2 is $+0.4$ ($B{=}4.25$) and $+0.7$ ($B{=}4.5$) \emph{above} the uniform baseline, and its POPE (88.8) matches uniform W4 exactly. The RefCOCO-chosen band transfers out of domain: ODinW F1 $0.582 \to 0.626$, recovering 61\% of the held-out loss, with small/medium-object recall recovery of 55--58\%. Everything replicates on the full official test splits ($n{=}5657/5095$): 49--60\% recovery on testA, 32--43\% on the harder testB, significant under a paired bootstrap (testA $+1.84$, 95\% CI $[1.29, 2.39]$).
 
-\paragraph{Consequences.} Practitioners: a stock 4-bit VLM has silently lost half its small-object detection---audit before shipping (our harness is that audit); $+6\%$ well-placed memory buys half back at zero VQA cost. Toolchains: profile sensitivity on the deployed quantizer; report grounding on model cards. Research: capabilities are separable, mappable structures---compression can become capability-aware, and the ${\sim}35$--$50\%$ residual is the target for recovery training.
+\paragraph{Consequences.} Practitioners: a stock 4-bit VLM has silently lost half its small-object detection---audit before shipping; $+6\%$ well-placed memory buys half back at zero VQA cost. Toolchains: profile sensitivity on the deployed quantizer; report grounding on model cards. Research: capabilities are separable, mappable structures---compression can become capability-aware, and the ${\sim}35$--$50\%$ residual is the target for recovery training.
 
 \section{Hypotheses, controls, and outcomes}
 
@@ -159,7 +159,7 @@ where $C$ is the set of coordinate-token positions in the teacher-forced target 
 
 \paragraph{Controls.} Matched memory for every allocation comparison; same calibration data and pipeline for every quantizer row; selection only on $D_{\text{dev}}$, disjoint from all reported numbers; held-out ODinW touched once; image-blind floors; parse failures reported separately.
 
-\paragraph{Known limitations.} (i) $s_m$ is teacher-forced and per-module; proxy validity rests on the end-to-end decoded selection and allocation-level controls. (ii) The novelty claim is \emph{to our knowledge} (closest: \cite{gwq,mbq,feather,nuwa,sqapvla,rethinkingsmall}). (iii) Single-model study; the 4B/8B scale study is deferred. The campaign cost ${\sim}$50 GPU-hours; all artifacts (harness, sensitivity maps, promotion lists) will be released.
+\paragraph{Known limitations.} (i) $s_m$ is teacher-forced and per-module; proxy validity rests on the end-to-end decoded selection and allocation-level controls. (ii) The novelty claim is \emph{to our knowledge} (closest: \cite{gwq,mbq,feather,nuwa,sqapvla,rethinkingsmall}). (iii) Single-model study; the 4B/8B scale study is deferred. The campaign cost ${\sim}$50 GPU-hours; all artifacts will be released.
 
 \begin{thebibliography}{20}\small
 \bibitem{qwen3vl} Bai et al. Qwen3-VL technical report. arXiv:2511.21631.
