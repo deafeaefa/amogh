@@ -77,3 +77,6 @@ gcqGPTQspec_vqa5k,/scratch/7168371.1.iris-gpu-pub/claude-1064820/-usr4-spclpgm-e
 rtnW3_odinw500s,Qwen/Qwen3-VL-2B-Instruct,odinw,P=0.0000 R=0.0000,1091,0.0000,,,,,,False,200
 gptqW3_pope,/scratch/7168371.1.iris-gpu-pub/claude-1064820/-usr4-spclpgm-eric1/28dca245-fe48-493e-8bfb-2ab74cc5ba7a/scratchpad/ckpts/gptqw3,pope,"adversarial:acc=0.588,f1=0.336 popular:acc=0.596,f1=0.341 random:acc=0.598,f1=0.344",9000,0.5943,,,,,,False,481
 gptqW3_odinw500s,Qwen/Qwen3-VL-2B-Instruct,odinw,P=0.0000 R=0.0000,1091,0.0000,,,,,,False,200
+gcq_b425_pope,Qwen/Qwen3-VL-2B-Instruct,pope,"adversarial:acc=0.875,f1=0.865 popular:acc=0.890,f1=0.880 random:acc=0.898,f1=0.887",9000,0.8876,,,,,,False,285
+gcq_b45_odinw500s,Qwen/Qwen3-VL-2B-Instruct,odinw,P=0.7109 R=0.5701,1091,0.6328,,,,,,False,126
+gcqGPTQspec_odinw500s,Qwen/Qwen3-VL-2B-Instruct,odinw,P=0.6399 R=0.5555,1091,0.5947,,,,,,False,132
