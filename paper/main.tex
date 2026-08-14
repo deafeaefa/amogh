@@ -106,11 +106,11 @@ where $C$ is the set of coordinate-token positions in the teacher-forced target 
     RTN W8 & 8 & 88.7 & 81.3 & 89.4 & 0.661 \\
     \midrule
     RTN W4 & 4 & 84.5 & 78.0 & 88.8 & 0.582 \\
-    GPTQ W4 & 4 & 85.4 & 78.1 & 89.4 & \PEND \\
-    RTN W4A8 & 4 & 82.8 & 77.5 & \PEND & \PEND \\
+    GPTQ W4 & 4 & 85.4 & 78.1 & 89.4 & 0.526 \\
+    RTN W4A8 & 4 & 82.8 & 77.5 & 88.7 & 0.573 \\
     \midrule
-    RTN W3 & 3 & 0.0 & 1.3 & 50.4 & \PEND \\
-    GPTQ W3 & 3 & 0.0 & 17.7 & \PEND & \PEND \\
+    RTN W3 & 3 & 0.0 & 1.3 & 50.4 & 0.000 \\
+    GPTQ W3 & 3 & 0.0 & 17.7 & 59.4 & 0.000 \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -125,13 +125,13 @@ where $C$ is the set of coordinate-token positions in the teacher-forced target 
     Policy (base quantizer RTN) & REC@0.5 & mean GIoU & VQAv2 \\
     \midrule
     Uniform W4 (no promotion) & 84.5 & 0.754 & 78.0 \\
-    Random promotion (3 seeds) & 84.9$\pm$0.3 & 0.758 & \PEND \\
+    Random promotion (3 seeds) & 84.9$\pm$0.3 & 0.758 & 78.2$\pm$0.4 \\
     VQA-sensitivity-driven & 85.1 & 0.764 & 78.6 \\
     \textbf{GCQ (ours)} & \textbf{86.6} & \textbf{0.775} & \textbf{78.4} \\
     \textbf{GCQ at $B{=}4.5$ (ours)} & \textbf{87.3} & \textbf{0.781} & \textbf{78.7} \\
     \midrule
     Uniform GPTQ-W4 & 85.4 & 0.745 & 78.1 \\
-    \textbf{GCQ on GPTQ (matched map)} & \textbf{85.5} & \textbf{0.768} & \PEND \\
+    \textbf{GCQ on GPTQ (matched map)} & \textbf{85.5} & \textbf{0.768} & \textbf{78.2} \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -150,7 +150,7 @@ where $C$ is the set of coordinate-token positions in the teacher-forced target 
   \label{fig:sens}
 \end{figure}
 
-\paragraph{The gap is real, hidden by aggregate benchmarks, and fatal at 3 bits.} At W4 the aggregate metrics degrade roughly proportionally---floor-corrected retention POPE 98.4\% $>$ grounding 94.9\% $>$ VQA 92.8\% (Table~\ref{tab:gap}, Figure~\ref{fig:main}a)---no pruning-style asymmetry. But the aggregate hides a gradient: on held-out ODinW stratified by ground-truth box size, W4 costs $-53$\% small-object recall ($18.5 \to 8.7$), $-26$\% medium, and large objects are untouched. The asymmetry was never absent; it is \emph{invisible to large-object benchmarks}---and to VQA and POPE entirely. Out of domain the same damage is bigger: W4 loses 11\% of relative ODinW F1 vs.\ 5\% of in-domain REC accuracy. At 3 bits the capabilities separate outright: RTN-W3 collapses globally (every score at its floor), but GPTQ-W3 half-survives, and there \emph{grounding dies first}---0\% parseable boxes while VQA retains partial, semantically varied function (17.7; verified not a yes-bias). W8 is lossless on every metric; W4A8 costs a further $-1.7$ REC over weight-only W4. The W4 grounding damage replicates at $-5.1$ points on the disjoint selection set.
+\paragraph{The gap is real, hidden by aggregate benchmarks, and fatal at 3 bits.} At W4 the aggregate metrics degrade roughly proportionally---floor-corrected retention POPE 98.4\% $>$ grounding 94.9\% $>$ VQA 92.8\% (Table~\ref{tab:gap}, Figure~\ref{fig:main}a)---no pruning-style asymmetry. But the aggregate hides a gradient: on held-out ODinW stratified by ground-truth box size, W4 costs $-53$\% small-object recall ($18.5 \to 8.7$), $-26$\% medium, and large objects are untouched. The asymmetry was never absent; it is \emph{invisible to large-object benchmarks}---and to VQA and POPE entirely. Out of domain the same damage is bigger: W4 loses 11\% of relative ODinW F1 vs.\ 5\% of in-domain REC accuracy. At 3 bits the capabilities separate outright: RTN-W3 collapses globally (every score at its floor), but GPTQ-W3 half-survives, and there \emph{grounding dies first}---0\% parseable boxes in and out of domain, while VQA and POPE retain partial function (17.7 and 59.4, the latter above its 50.0 floor; answers verified varied, not a yes-bias). W8 is lossless on every metric; W4A8 costs a further $-1.7$ REC over weight-only W4. The W4 grounding damage replicates at $-5.1$ points on the disjoint selection set.
 
 \paragraph{The damage is mappable---and the map is capability- and quantizer-specific.} The promote-one-module profile over all 56 module-groups (Figure~\ref{fig:sens}) is concentrated, not diffuse: it peaks in a contiguous band of \emph{attention} modules in layers 10--17 of 28, and MLPs lose every per-byte comparison at the $B{=}4.25$ budget---converging with mechanistic evidence that localization is carried by a few attention heads in specific layer ranges~\cite{locheads,causalheads}. The VQA map is statistically unrelated (Spearman $\rho = 0.001$; top-7 module overlap $0/7$), so protecting grounding and protecting VQA are \emph{different} interventions. The map is also quantizer-specific ($\rho$ between RTN- and GPTQ-profiled maps $= 0.082$): transplanting the RTN map onto GPTQ \emph{costs} $-1.2$ REC with 2.8\% parse failures, while the matched GPTQ-profiled map restores parity, recovers 44\% of the lost GIoU, and has zero parse failures (Table~\ref{tab:alloc}, bottom). The prescription: profile on the quantizer you deploy.
 
