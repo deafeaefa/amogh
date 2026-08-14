@@ -41,11 +41,18 @@ def main():
     ap.add_argument("--batch", type=int, default=16)
     ap.add_argument("--out", default="sensitivity.csv")
     ap.add_argument("--base-ckpt", default="", help="profile from this quant-dequant checkpoint as the base (e.g. GPTQ-W4) instead of in-memory RTN")
+    ap.add_argument("--small-frac", type=float, default=0.0,
+                    help="keep only the smallest F fraction of probe boxes by relative area (rec probe only)")
     args = ap.parse_args()
 
     data_dir = os.environ["GCQ_DATA"]; runs_dir = os.environ["GCQ_RUNS"]
     probe_file = "dprobe_refcoco_train_512.json" if args.probe == "rec" else "vqa_probe_512.json"
     recs = json.load(open(os.path.join(data_dir, "subsets", probe_file)))[:args.limit]
+    if args.small_frac > 0:
+        assert args.probe == "rec"
+        recs = sorted(recs, key=lambda r: r["bbox_xywh"][2] * r["bbox_xywh"][3] / (r["width"] * r["height"]))
+        recs = recs[:max(32, int(args.small_frac * len(recs)))]
+        print(f"small-frac={args.small_frac}: {len(recs)} smallest-box probe samples")
 
     processor = AutoProcessor.from_pretrained("Qwen/Qwen3-VL-2B-Instruct")
     processor.tokenizer.padding_side = "right"
