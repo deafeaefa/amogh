@@ -57,7 +57,7 @@ We call the recipe \textbf{GCQ} (grounding-consistent quantization): one model, 
 
 \paragraph{The asymmetry is documented---for pruning.} FEATHER~\cite{feather} showed that visual-token pruning leaves most benchmarks intact while localization accuracy decays roughly linearly to zero, and that popular benchmarks fail to detect this because they require minimal grounding. N\"uwa~\cite{nuwa} quantified the asymmetry (the 95\%-vs-47\% figure above, under 88.9\% token reduction); further pruning studies report the same fragility for pixel and UI grounding~\cite{litelvlm,focusui}. The mechanism is intuitive: a correct box needs a preserved spatial reference frame and fine positional detail; ``what color is the dog'' does not.
 
-\paragraph{For quantization, nobody has looked systematically.} The VLM PTQ literature evaluates exclusively on VQA/OCR/chart/doc/reasoning; MBQ~\cite{mbq} frames sensitivity as a \emph{modality} issue, not a \emph{capability} issue---no existing method asks which layers carry \emph{localization}. Direct evidence is two isolated datapoints pointing in opposite directions: GWQ's incidental near-lossless RefCOCO table at ${\sim}4.6$ bits with FP16 outliers retained~\cite{gwq}---whose own \emph{baseline} rows show 4-bit AWQ dropping RefCOCO by 4.9 points, unremarked---vs.\ an applied study's 4-bit Qwen-VL that classifies damage correctly but ``fail[s] consistently'' to localize it~\cite{vehicledamage}. The Qwen3 family is known to degrade steeply at $\le$3 bits~\cite{qwen3quant}; component-wise vision/LLM bit allocation is evaluated on MME only~\cite{rethinkingsmall}, SQAP-VLA~\cite{sqapvla} protects visual \emph{input} tokens, and MODE~\cite{mode} allocates expert bits by modality. The closest allocation prior, TAQ~\cite{taq}, conditions per-layer precision on \emph{tasks} --- but for text-only LLMs; no work allocates by \emph{capability} in a VLM.
+\paragraph{For quantization, nobody has looked systematically.} The VLM PTQ literature evaluates exclusively on VQA/OCR/chart/doc/reasoning; MBQ~\cite{mbq} frames sensitivity as a \emph{modality} issue, not a \emph{capability} issue---no existing method asks which layers carry \emph{localization}. Direct evidence is two isolated datapoints pointing in opposite directions: GWQ's incidental near-lossless RefCOCO table at ${\sim}4.6$ bits with FP16 outliers retained~\cite{gwq}---whose own \emph{baseline} rows show 4-bit AWQ dropping RefCOCO by 4.9 points, unremarked---vs.\ an applied study's 4-bit Qwen-VL that classifies damage correctly but ``fail[s] consistently'' to localize it~\cite{vehicledamage}. The Qwen3 family is known to degrade steeply at $\le$3 bits~\cite{qwen3quant}; component-wise vision/LLM bit allocation is evaluated on MME only~\cite{rethinkingsmall}, SQAP-VLA~\cite{sqapvla} protects visual \emph{input} tokens, and MODE~\cite{mode} allocates expert bits by modality. The closest allocation prior conditions per-layer precision on \emph{tasks} from hidden-representation signals~\cite{taq} --- but for text-only LLMs; no work allocates by \emph{capability} in a VLM.
 
 \paragraph{Why Qwen3-VL-2B.} Qwen3-VL~\cite{qwen3vl} trains grounding natively and emits coordinates as plain text in a normalized $[0,1000]$ system, and the 2B is edge-realistic (${\sim}1.5$\,GB at W4; we write WxAy for $x$-bit weights, $y$-bit activations). Following~\cite{rethinkingsmall}, the vision tower stays at BF16/INT8; all aggressive quantization targets the LLM.
 
@@ -162,27 +162,27 @@ where $C$ is the set of coordinate-token positions in the teacher-forced target 
 
 \begin{thebibliography}{20}\small
 \bibitem{qwen3vl} Bai et al. Qwen3-VL technical report. arXiv:2511.21631.
-\bibitem{feather} Endo et al. Feather the throttle: Revisiting visual token pruning for vision-language models. arXiv:2412.13180, ICCV 2025.
+\bibitem{feather} Endo et al. Feather the throttle: Revisiting visual token pruning for vision-language model acceleration. arXiv:2412.13180, ICCV 2025.
 \bibitem{nuwa} Huang et al. N\"uwa: Mending the spatial integrity torn by VLM token pruning. arXiv:2602.02951.
-\bibitem{litelvlm} Lee et al. CLIP tricks you: Training-free token pruning for efficient pixel grounding. arXiv:2605.13178.
+\bibitem{litelvlm} Lee et al. CLIP tricks you: Training-free token pruning for efficient pixel grounding in large vision-language models. arXiv:2605.13178.
 \bibitem{focusui} Ouyang et al. FocusUI: Efficient UI grounding via position-preserving visual token selection. arXiv:2601.03928.
 \bibitem{mbq} Li et al. MBQ: Modality-balanced quantization for large vision-language models. arXiv:2412.19509, CVPR 2025.
 \bibitem{qvlm} Wang et al. Q-VLM: Post-training quantization for large vision-language models. arXiv:2410.08119, NeurIPS 2024.
 \bibitem{vlmq} Xue et al. VLMQ: Token saliency-driven post-training quantization for vision-language models. arXiv:2508.03351.
 \bibitem{luq} Bhatnagar et al. LUQ: Layerwise ultra-low bit quantization for multimodal large language models. arXiv:2509.23729.
-\bibitem{speedq} Guo et al. SPEED-Q: Staged processing with enhanced distillation towards efficient low-bit quantization. arXiv:2511.08914.
+\bibitem{speedq} Guo et al. SPEED-Q: Staged processing with enhanced distillation towards efficient low-bit on-device VLM quantization. arXiv:2511.08914.
 \bibitem{gwq} Shao et al. GWQ: Gradient-aware weight quantization for large language models. arXiv:2411.00850.
 \bibitem{qwen3quant} Zheng et al. An empirical study of Qwen3 quantization. arXiv:2505.02214.
-\bibitem{rethinkingsmall} Shin et al. Rethinking small VLM quantization: From component-wise analysis to hardware-aware deployment. arXiv:2607.08029.
+\bibitem{rethinkingsmall} Shin et al. Rethinking small VLM quantization: From component-wise analysis to hardware-aware edge deployment. arXiv:2607.08029.
 \bibitem{locdistill} Zheng et al. Localization distillation for dense object detection. arXiv:2102.12252.
 \bibitem{sqapvla} Fang et al. SQAP-VLA: A synergistic quantization-aware pruning framework for vision-language-action models. arXiv:2509.09090.
 \bibitem{groundingtokens} Ren et al. Grounding everything in tokens for multimodal large language models. arXiv:2512.10554.
 \bibitem{vehicledamage} Hogale et al. Grounding agentic VLMs with dedicated segmentation for fine-grained vehicle damage assessment. arXiv:2608.02470.
-\bibitem{miniinternvl} Gao et al. Mini-InternVL: A flexible-transfer pocket multimodal model with 5\% parameters. arXiv:2410.16261.
-\bibitem{taq} TAQ: Task-aware quantization for large language models. arXiv:2511.06516.
-\bibitem{mode} MODE: Mixture-of-experts VLM quantization via modality-decomposed expert allocation. arXiv:2606.17118.
-\bibitem{locheads} Locate anything with a few localization heads: Training-free referring localization in LVLMs. arXiv:2503.06287, CVPR 2025.
-\bibitem{causalheads} Causal mediation of object localization in vision-language models. arXiv:2605.19792, CVPR 2026.
+\bibitem{miniinternvl} Gao et al. Mini-InternVL: A flexible-transfer pocket multimodal model with 5\% parameters and 90\% performance. arXiv:2410.16261.
+\bibitem{taq} LeVi et al. You had one job: Per-task quantization using LLMs' hidden representations. arXiv:2511.06516.
+\bibitem{mode} Chen et al. MODE: Modality-decomposed expert-level mixed-precision quantization for MoE multimodal LLMs. arXiv:2606.17118.
+\bibitem{locheads} Kang et al. Your large vision-language model only needs a few attention heads for visual grounding. arXiv:2503.06287, CVPR 2025.
+\bibitem{causalheads} Schauml\"offel et al. Mechanisms of object localization in vision-language models. arXiv:2605.19792, CVPR 2026.
 \bibitem{ollamaqwen} Ollama model library: qwen2.5vl. \url{https://ollama.com/library/qwen2.5vl}, accessed Aug 2026.
 \end{thebibliography}
 
