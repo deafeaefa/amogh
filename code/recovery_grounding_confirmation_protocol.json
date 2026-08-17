@@ -1,0 +1,104 @@
+{
+  "schema_version": 1,
+  "role": "frozen one-time grounding confirmation, authorized only after fresh-VQA confirmation passes",
+  "recipe_id": "gcq425_lora_cwce_vqa50_g5_lr5e5_s0",
+  "base_model": "Qwen/Qwen3-VL-2B-Instruct",
+  "base_revision": "89644892e4d85e24eaac8bacfd4f463576704203",
+  "authorization": {
+    "required_summary": "vqa_confirmation_summary.json",
+    "required_field": "confirmation_pass",
+    "required_value": true,
+    "allowed_trained_candidates": 1,
+    "candidate": "exactly the checkpoint selected by development and confirmed on fresh VQA"
+  },
+  "data": {
+    "dataset": "RefCOCO+",
+    "splits": {
+      "testA": {
+        "manifest": "refcocoplus_testA_confirm_full.json",
+        "manifest_sha256": "542fbbf73fe0623ed79ddba19167fce34647f97613d14e48b12ca5d96457ff83",
+        "ordered_uid_sha256": "298cd11f84e8acf8098eed3c9232ac90b7156938abdd87d1d6fbd7d8cfdbc409",
+        "expressions": 5726,
+        "images": 750
+      },
+      "testB": {
+        "manifest": "refcocoplus_testB_confirm_full.json",
+        "manifest_sha256": "fafda8c81957baef1417c26e84fe225f51100eb2261ae61d123325a2b1c44462",
+        "ordered_uid_sha256": "ad420b65cc28cef2b0c717977c2067f6ec51154e88e59e10dcc1d4d751d67d02",
+        "expressions": 4889,
+        "images": 750
+      }
+    },
+    "metadata_manifest": "refcocoplus_confirmation.meta.json",
+    "metadata_manifest_sha256": "af4b9e3b7f5c5848e4bacb7218240ef3b736582e879a4ff48353cefc41a5615a",
+    "scientific_status": {
+      "manifest_frozen_before_selection": true,
+      "model_predictions_and_metrics_unseen_before_selection": true,
+      "recovery_training_and_development_disjoint": true,
+      "global_coco_image_unseen_claim": false,
+      "earlier_refcoco_test_split_image_overlap": {
+        "testA": 750,
+        "testB": 750
+      },
+      "caveat": "All 750 COCO images in each RefCOCO+ split also occur in the corresponding earlier RefCOCO test split. The RefCOCO+ manifest was frozen before selection, and its model predictions and metrics were unseen; this is an untouched-expression/result confirmation, not a globally image-unseen confirmation."
+    }
+  },
+  "evaluation": {
+    "scheduler_array_tasks": {
+      "1": "testA",
+      "2": "testB"
+    },
+    "hardware": "one NVIDIA L40S per split",
+    "within_task_execution": "all four arms run sequentially on the same physical GPU",
+    "arm_order": [
+      "bf16",
+      "uniform_rtn_w4",
+      "untrained_gcq4.25",
+      "vqa_confirmed_selected_adapter"
+    ],
+    "fixed_tag_templates": {
+      "bf16": "bf16_refcocoplus_{split}_confirm",
+      "uniform_rtn_w4": "w4rtn_refcocoplus_{split}_confirm",
+      "untrained_gcq4.25": "gcq425_untrained_refcocoplus_{split}_confirm",
+      "vqa_confirmed_selected_adapter": "gcq425_vqa_selected_refcocoplus_{split}_confirm"
+    },
+    "quantization": {
+      "method": "rtn_quantize_dequantize",
+      "bits": 4,
+      "group_size": 128,
+      "gcq_promotion_manifest_sha256": "78b3138da1c70f2f944e3c63d5cfc754f59bf6062c27564d8cc6b2792ba0c1e6",
+      "gcq_average_decoder_bits": 4.25
+    },
+    "max_pixels": 1003520,
+    "batch_size": 16,
+    "decoding": "greedy",
+    "metrics": [
+      "REC accuracy at IoU >= 0.5",
+      "mean GIoU",
+      "mean accuracy across IoU thresholds 0.50:0.05:0.95",
+      "parse-failure rate"
+    ]
+  },
+  "statistics": {
+    "comparison_unit": "paired referring expressions clustered by COCO image",
+    "bootstrap_resamples": 10000,
+    "bootstrap_base_seed": 20260860,
+    "confidence_interval": 0.95,
+    "reported_comparisons": [
+      "selected adapter minus untrained GCQ4.25",
+      "untrained GCQ4.25 minus uniform RTN-W4",
+      "BF16 minus untrained GCQ4.25"
+    ]
+  },
+  "gates": {
+    "each_split_separate": true,
+    "selected_minus_untrained_gcq_rec_ci95_lower_strictly_above_zero": true,
+    "selected_minus_untrained_gcq_giou_point_strictly_above_zero": true,
+    "selected_minus_untrained_gcq_precise_iou_point_strictly_above_zero": true,
+    "selected_parse_fail_max_increase": 0.005
+  },
+  "failure_policy": {
+    "scientific_gate_failure": "write the complete summary and exit successfully; do not substitute another checkpoint",
+    "integrity_failure": "do not write a scientific result; exit nonzero"
+  }
+}

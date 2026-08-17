@@ -1,19 +1,21 @@
 """REC (referring-expression comprehension) evaluation harness for GCQ.
 
-Scores a Qwen3-VL model (BF16 or quantized) on a frozen subset:
-  acc@IoU0.5, mean GIoU, parse-failure rate, size-stratified acc (COCO areas).
+Scores a Qwen3-VL model (BF16, quantized, or quantized+adapter) on a frozen subset:
+  acc@IoU0.5, mean GIoU, precise-IoU AUC, parse-failure rate, and balanced
+  relative-area quartiles (absolute COCO-size bins are retained as secondary).
 Writes one CSV row to $GCQ_RUNS/results.csv and per-sample records to
 $GCQ_RUNS/<tag>.rec.jsonl. Greedy decoding; deterministic.
 
 Usage:
   python eval_rec.py --model Qwen/Qwen3-VL-2B-Instruct --subset rec_eval_refcoco_val_1k \
-      --tag bf16_receval --batch 16 [--limit N] [--blank-image] [--load-4bit-dir DIR]
+      --tag bf16_receval --batch 16 [--limit N] [--blank-image] [--adapter-dir DIR]
 """
 import os, re, io, json, csv, time, argparse
 import torch
 import gcq_patches; gcq_patches.apply_fast_patch_embed()
 from transformers import AutoModelForImageTextToText, AutoProcessor
 from PIL import Image
+from recovery_utils import BASE_REVISION, IOU_THRESHOLDS
 
 BOX_RE = re.compile(r'"bbox_2d"\s*:\s*\[\s*(-?\d+)\s*,\s*(-?\d+)\s*,\s*(-?\d+)\s*,\s*(-?\d+)\s*\]')
 
@@ -43,9 +45,57 @@ def size_bucket(area):
     if area < 96**2: return "medium"
     return "large"
 
+def relative_area(record):
+    box = record["bbox_xywh"]
+    return box[2] * box[3] / (record["width"] * record["height"])
+
+def area_quartiles(records):
+    """Assign balanced, outcome-independent relative-area quartiles by rank."""
+    ordered = sorted(range(len(records)), key=lambda i: (relative_area(records[i]), records[i]["uid"]))
+    result = {}
+    for rank, index in enumerate(ordered):
+        result[index] = min(4, 1 + (4 * rank // len(ordered)))
+    return result
+
+
+def update_group(groups, key, iou, giou, parse_failed):
+    stats = groups.setdefault(key, {
+        "n": 0, "correct": 0, "parsefail": 0, "giou_sum": 0.0,
+        "threshold_hits": {threshold: 0 for threshold in IOU_THRESHOLDS},
+    })
+    stats["n"] += 1
+    stats["correct"] += int(iou >= 0.5)
+    stats["parsefail"] += int(parse_failed)
+    stats["giou_sum"] += giou
+    for threshold in IOU_THRESHOLDS:
+        stats["threshold_hits"][threshold] += int(iou >= threshold)
+
+
+def finalize_groups(groups):
+    metrics = {}
+    for group, stats in sorted(groups.items()):
+        group_n = stats["n"]
+        group_threshold_accuracy = {
+            f"{threshold:.2f}": stats["threshold_hits"][threshold] / group_n
+            for threshold in IOU_THRESHOLDS
+        }
+        metrics[group] = {
+            "n": group_n,
+            "acc_iou_0.5": stats["correct"] / group_n,
+            "mean_giou": stats["giou_sum"] / group_n,
+            "parse_fail": stats["parsefail"] / group_n,
+            "mean_acc_iou_0.50_0.95": (
+                sum(group_threshold_accuracy.values()) / len(group_threshold_accuracy)
+            ),
+            "accuracy_by_iou": group_threshold_accuracy,
+        }
+    return metrics
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", required=True)
+    ap.add_argument("--revision", default=BASE_REVISION,
+                    help="immutable base-model revision used by every compared arm")
     ap.add_argument("--subset", required=True)
     ap.add_argument("--tag", required=True)
     ap.add_argument("--batch", type=int, default=16)
@@ -57,6 +107,7 @@ def main():
     ap.add_argument("--a8", action="store_true", help="simulated 8-bit dynamic activation quant on LLM linears")
     ap.add_argument("--max-pixels", type=int, default=1003520, help="1280*28*28, Qwen-standard eval cap; identical for ALL configs")
     ap.add_argument("--promote-file", default="", help="JSON {substrings:[], bits:8}: promote these modules during RTN")
+    ap.add_argument("--adapter-dir", default="", help="GCQ recovery adapter; attached after base quantization")
     args = ap.parse_args()
 
     data_dir = os.environ["GCQ_DATA"]; runs_dir = os.environ["GCQ_RUNS"]
@@ -64,13 +115,22 @@ def main():
     with open(os.path.join(data_dir, "subsets", args.subset + ".json")) as f:
         recs = json.load(f)
     if args.limit: recs = recs[:args.limit]
+    quartile_by_index = area_quartiles(recs)
 
-    processor = AutoProcessor.from_pretrained("Qwen/Qwen3-VL-2B-Instruct", max_pixels=args.max_pixels)
+    adapter_manifest = None
+    revision = args.revision
+    if args.adapter_dir:
+        from recovery_utils import read_adapter_manifest, validate_adapter_quantization
+        adapter_manifest = read_adapter_manifest(args.adapter_dir)
+        validate_adapter_quantization(adapter_manifest, args.model, args.rtn_bits, args.rtn_group,
+                                      args.promote_file, args.max_pixels, base_revision=revision)
+    processor = AutoProcessor.from_pretrained(args.model, revision=revision,
+                                             max_pixels=args.max_pixels)
     processor.tokenizer.padding_side = "left"
     print("image processor max_pixels:", getattr(processor.image_processor, "max_pixels", "N/A"))
     t0 = time.time()
-    model = AutoModelForImageTextToText.from_pretrained(args.model, dtype=torch.bfloat16, device_map=args.device)
-    model.eval()
+    model = AutoModelForImageTextToText.from_pretrained(args.model, revision=revision,
+                                                        dtype=torch.bfloat16, device_map=args.device)
     if args.rtn_bits:
         from quant_utils import apply_rtn
         promote = None
@@ -85,12 +145,22 @@ def main():
     if args.a8:
         from quant_utils import apply_a8
         print(f"A8 hooks on {apply_a8(model)} linears")
+    if args.adapter_dir:
+        from recovery_utils import attach_adapter
+        model = attach_adapter(model, args.adapter_dir)
+        print(f"attached recovery adapter {args.adapter_dir}")
+    model.eval()
     print(f"model {args.model} loaded {time.time()-t0:.0f}s")
 
     out_path = os.path.join(runs_dir, args.tag + ".rec.jsonl")
     n = correct = parsefail = 0
     giou_sum = 0.0
     by_size = {"small": [0,0], "medium": [0,0], "large": [0,0]}
+    by_quartile = {q: [0, 0] for q in range(1, 5)}
+    iou_thresholds = IOU_THRESHOLDS
+    threshold_hits = {threshold: 0 for threshold in iou_thresholds}
+    by_task = {}
+    by_source = {}
     t0 = time.time()
     with open(out_path, "w") as fout:
         for i in range(0, len(recs), args.batch):
@@ -110,20 +180,34 @@ def main():
             with torch.no_grad():
                 out = model.generate(**inputs, max_new_tokens=64, do_sample=False)
             texts = processor.batch_decode(out[:, inputs["input_ids"].shape[1]:], skip_special_tokens=True)
-            for r, text in zip(chunk, texts):
+            for offset, (r, text) in enumerate(zip(chunk, texts)):
                 gt = r["bbox_xywh"]; gt_xyxy = [gt[0], gt[1], gt[0]+gt[2], gt[1]+gt[3]]
                 box = parse_box(text)
+                dataset_index = i + offset
+                area_rel = relative_area(r)
+                area_q = quartile_by_index[dataset_index]
                 n += 1
                 bucket = size_bucket(gt[2]*gt[3]); by_size[bucket][1] += 1
+                by_quartile[area_q][1] += 1
                 if box is None:
                     parsefail += 1; iou = 0.0; giou = -1.0
                 else:
                     iou, giou = iou_giou(to_pixels(box, r["width"], r["height"]), gt_xyxy)
                 hit = iou >= 0.5
-                if hit: correct += 1; by_size[bucket][0] += 1
+                task = r.get("task", "rec")
+                source = r.get("source", "unknown")
+                update_group(by_task, task, iou, giou, box is None)
+                update_group(by_source, source, iou, giou, box is None)
+                if hit:
+                    correct += 1; by_size[bucket][0] += 1; by_quartile[area_q][0] += 1
+                for threshold in iou_thresholds:
+                    threshold_hits[threshold] += int(iou >= threshold)
                 giou_sum += giou
-                fout.write(json.dumps({"uid": r["uid"], "pred_raw": text.strip()[:200],
-                                       "box1000": box, "iou": round(iou,4), "giou": round(giou,4), "hit": hit}) + "\n")
+                fout.write(json.dumps({"uid": r["uid"], "image_id": r.get("image_id"),
+                                       "task": task, "source": source,
+                                       "relative_area": round(area_rel, 8), "area_quartile": area_q,
+                                       "pred_raw": text.strip()[:200], "box1000": box,
+                                       "iou": iou, "giou": giou, "hit": hit}) + "\n")
             fout.flush()
             if (i//args.batch) % 10 == 0:
                 el = time.time()-t0
@@ -131,8 +215,26 @@ def main():
 
     acc = correct/n; mgiou = giou_sum/n; pf = parsefail/n
     sizes = {k: (v[0]/v[1] if v[1] else None) for k, v in by_size.items()}
+    quartiles = {f"q{q}": {"acc": (by_quartile[q][0] / by_quartile[q][1]
+                                             if by_quartile[q][1] else None),
+                               "n": by_quartile[q][1]}
+                 for q in range(1, 5)}
+    threshold_accuracy = {f"{threshold:.2f}": threshold_hits[threshold] / n for threshold in iou_thresholds}
+    precise_iou_auc = sum(threshold_accuracy.values()) / len(threshold_accuracy)
+    task_metrics = finalize_groups(by_task)
+    source_metrics = finalize_groups(by_source)
     print(f"\nRESULT tag={args.tag} model={args.model} subset={args.subset} n={n}")
     print(f"  acc@0.5={acc:.4f} meanGIoU={mgiou:.4f} parsefail={pf:.4f} by_size={sizes}")
+    print(f"  precise-IoU mean={precise_iou_auc:.4f} quartiles={quartiles}")
+    with open(os.path.join(runs_dir, args.tag + ".rec.metrics.json"), "w") as f:
+        json.dump({"tag": args.tag, "model": args.model, "subset": args.subset, "n": n,
+                   "acc_iou_0.5": acc, "mean_giou": mgiou, "parse_fail": pf,
+                   "mean_acc_iou_0.50_0.95": precise_iou_auc,
+                   "accuracy_by_iou": threshold_accuracy, "relative_area_quartiles": quartiles,
+                   "absolute_coco_size": sizes, "by_task": task_metrics,
+                   "by_source": source_metrics,
+                   "base_revision": revision}, f, indent=2)
+        f.write("\n")
     csv_path = os.path.join(runs_dir, "results.csv")
     new = not os.path.exists(csv_path)
     with open(csv_path, "a", newline="") as f:

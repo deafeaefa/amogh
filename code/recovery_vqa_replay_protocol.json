@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "role": "frozen development and confirmation protocol after the first recovery recipe failed VQA preservation",
+  "recipe_id": "gcq425_lora_cwce_vqa50_g5_lr5e5_s0",
+  "base_model": "Qwen/Qwen3-VL-2B-Instruct",
+  "base_revision": "89644892e4d85e24eaac8bacfd4f463576704203",
+  "quantization": {
+    "method": "rtn_quantize_dequantize",
+    "bits": 4,
+    "group_size": 128,
+    "promotion_manifest_sha256": "78b3138da1c70f2f944e3c63d5cfc754f59bf6062c27564d8cc6b2792ba0c1e6",
+    "average_decoder_bits": 4.25
+  },
+  "training": {
+    "manifest": "recovery_train_vqa_replay_12k.json",
+    "manifest_sha256": "8bf3b6a1589527f5847ea28a7c5f0daeb89f6e0d7fa220451db87c52314aec4a",
+    "examples": 12000,
+    "grounding_examples": 6000,
+    "vqav2_train_replay_examples": 6000,
+    "caption_examples": 0,
+    "objective": "coordinate_weighted_ce",
+    "coordinate_weight": 5.0,
+    "lora_rank": 16,
+    "lora_alpha": 32,
+    "lora_dropout": 0.05,
+    "learning_rate": 0.00005,
+    "effective_batch_size": 16,
+    "epochs": 1,
+    "planned_optimizer_steps": 750,
+    "seed": 0
+  },
+  "development": {
+    "grounding_manifest": "recovery_dev_1k.json",
+    "grounding_primary_task": "750 referring-expression examples",
+    "vqa_manifest": "vqa_val_5k.json",
+    "vqa_manifest_sha256": "28091f5c1fa94e28d24b948d2546fd1db06eec41556a6c99f19fbfd163ec0c4d",
+    "vqa_role": "development-only after the step-300 one-time holdout failure",
+    "candidate_steps": [200, 300, 400, 500, 600, 750],
+    "gates": {
+      "primary_rec_gain_over_untrained_gcq_min": 0.01,
+      "primary_giou_must_improve": true,
+      "primary_precise_iou_must_improve": true,
+      "primary_rec_must_exceed_w4_cwce": true,
+      "primary_parse_fail_max_increase": 0.005,
+      "vqa_point_drop_max": 0.005,
+      "vqa_paired_ci95_lower_bound_min": -0.015
+    },
+    "reference_scores": {
+      "untrained_gcq_primary_rec": 0.8053333333333333,
+      "untrained_gcq_primary_giou": 0.7087078091647582,
+      "untrained_gcq_primary_precise_iou": 0.6674666666666667,
+      "untrained_gcq_primary_parse_fail": 0.0013333333333333333,
+      "w4_cwce_primary_rec": 0.8173333333333334,
+      "untrained_gcq_vqa5k": 0.7737
+    },
+    "selection_order": [
+      "maximum primary REC",
+      "maximum primary precise-IoU",
+      "maximum primary GIoU",
+      "earlier optimizer step",
+      "stable recipe identifier"
+    ]
+  },
+  "confirmation": {
+    "vqa_manifest": "vqa_fresh_confirm_5k.json",
+    "vqa_manifest_sha256": "416aea5f9dd6f4a4cfa7061c3b5ca0af88647e49d5f17ed00a8d83885ea21038",
+    "questions": 5000,
+    "unique_images": 4571,
+    "image_disjoint_from": ["vqa_val_5k.json", "POPE"],
+    "allowed_trained_candidates": 1,
+    "paired_image_bootstrap_resamples": 10000,
+    "vqa_paired_ci95_lower_bound_min": -0.015,
+    "pope_role": "exposed secondary regression benchmark, not untouched confirmation",
+    "on_failure": "do not evaluate a second trained candidate on this confirmation set"
+  }
+}

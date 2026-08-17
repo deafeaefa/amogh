@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "amendment_id": "development-primary-parse-pairing-20260815",
+  "created_at_utc": "2026-08-15T04:42:40Z",
+  "timing": "created after all six evaluation tasks exited zero and before any successful development summary or checkpoint selection",
+  "original_development_launch_manifest": "/projectnb/rise-tower/eric1/GCQ/runs/recovery_vqa_replay/development_launch_manifest.json",
+  "original_development_launch_manifest_sha256": "a218efcf7337fc51f54a7c598ad679542bfeef079388cf480eda4265ff62ead7",
+  "original_frozen_summarizer": "/usr4/spclpgm/eric1/GCQ/code/summarize_recovery_vqa_development.py",
+  "original_frozen_summarizer_sha256": "081490cb3051b18268ca8a04282da318c8a8a5df444c01fdfbed03f6dd1f48f8",
+  "amended_wrapper": "/usr4/spclpgm/eric1/GCQ/code/summarize_recovery_vqa_development_amended.py",
+  "amended_wrapper_sha256": "63ccce3388abd53ea46a793d6b2fbde923639eb5bb9460acf8bb9c30e673206d",
+  "trigger": "The frozen summarizer exited before writing development_summary.json because checkpoint 200 paired parse-failure delta was -0.004 while its primary-REC aggregate delta was 0.0.",
+  "root_cause": "The paired parse-failure bootstrap received all 1000 recovery-development rows (750 primary REC plus 250 auxiliary COCO grounding), but its invariant and frozen gate compare against the 750-row primary REC subgroup. Every other grounding contrast already filters to task=rec.",
+  "repair": "For field=parse_fail only, filter both paired inputs and the image map to the exact 750 rows with task=rec before calling the unchanged frozen paired image-cluster bootstrap. All other calls delegate unchanged.",
+  "unchanged": [
+    "candidate checkpoints",
+    "prediction and metric artifacts",
+    "baseline artifacts",
+    "data manifests",
+    "model and revision",
+    "gate thresholds",
+    "bootstrap count and seeds",
+    "selection metrics and tie-break order",
+    "the launch-frozen summarizer and all of its hash validation"
+  ],
+  "first_attempt": {
+    "exit_status": 1,
+    "summary_written": false,
+    "error": "checkpoint 200 paired parse-failure delta changed: -0.004 != 0.0"
+  }
+}

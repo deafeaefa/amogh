@@ -1,0 +1,103 @@
+{
+  "schema_version": 1,
+  "round_id": "balanced-replay-remaining-checkpoints-development-round-2",
+  "created_at_utc": "2026-08-15T05:07:13Z",
+  "role": "post-failure development-only follow-up; confirmation remains untouched",
+  "rationale": "The preregistered 200/300/400/500/600/750 development round completed with no eligible checkpoint. Evaluate in one final development round the complete complement of previously unevaluated systematic 50-step saves (50/100/150/250/350/450/550/650/700), without changing training, data, evaluators, gates, bootstrap, or selection rule. This complete complement was frozen before any metric from these candidates was generated or inspected.",
+  "recipe_id": "gcq425_lora_cwce_vqa50_g5_lr5e5_s0",
+  "base_model": "Qwen/Qwen3-VL-2B-Instruct",
+  "base_revision": "89644892e4d85e24eaac8bacfd4f463576704203",
+  "candidate_steps": [50, 100, 150, 250, 350, 450, 550, 650, 700],
+  "candidate_scope": "the complete set difference between all structurally valid saved 50-step checkpoints and the parent round's valid evaluated checkpoints",
+  "training_checkpoint_inventory": {
+    "systematic_saved_steps": [50, 100, 150, 200, 250, 300, 350, 400, 450, 500, 550, 600, 650, 700, 750],
+    "structurally_valid_steps": [50, 100, 150, 200, 250, 300, 350, 400, 450, 500, 550, 600, 650, 700],
+    "parent_valid_evaluated_steps": [200, 300, 400, 500, 600],
+    "invalid_steps": [750]
+  },
+  "step750_integrity_incident": {
+    "status": "excluded before round-2 launch because the adapter artifact is structurally invalid",
+    "adapter_sha256": "513d8902b2b751059b5fbde617423f90306995376826d476c19c40ebb1ae22e0",
+    "apparent_file_bytes": 69788264,
+    "allocated_file_bytes": 16777216,
+    "tensor_count": 392,
+    "exactly_zero_tensor_count": 296,
+    "aggregate_l2_norm": 15.895978057964,
+    "valid_step700_aggregate_l2_norm": 32.670029090548,
+    "root_processor_tokenizer_bytes": 0,
+    "interpretation": "step 750 is a sparse/corrupted artifact; its parent-round metrics are invalid and cannot be used for checkpoint selection or scientific claims"
+  },
+  "parent_development": {
+    "summary_sha256": "4b923471b3af3244b7874995e871ae38619c61298bdf07851ba93fac5cc35698",
+    "required_selection_succeeded": false,
+    "required_candidate_steps": [200, 300, 400, 500, 600, 750],
+    "amendment_sha256": "3261c3cfa13401d5577d831f9d52a500b7a74d186c8314289e51395b4e78d3f6",
+    "amended_wrapper_sha256": "63ccce3388abd53ea46a793d6b2fbde923639eb5bb9460acf8bb9c30e673206d"
+  },
+  "evaluation": {
+    "grounding_subset": "recovery_dev_1k",
+    "grounding_examples": 1000,
+    "primary_task": "rec",
+    "primary_examples": 750,
+    "vqa_manifest": "vqa_val_5k.json",
+    "vqa_examples": 5000,
+    "grounding_command": {
+      "rtn_bits": 4,
+      "rtn_group": 128,
+      "max_pixels": 1003520,
+      "batch": 16,
+      "device": "cuda:0"
+    },
+    "vqa_command": {
+      "task": "vqa",
+      "rtn_bits": 4,
+      "rtn_group": 128,
+      "max_pixels": 1003520,
+      "batch": 24,
+      "device": "cuda:0"
+    }
+  },
+  "gates": {
+    "primary_rec_gain_over_untrained_gcq_min": 0.01,
+    "primary_giou_must_improve": true,
+    "primary_precise_iou_must_improve": true,
+    "primary_rec_must_exceed_w4_cwce": true,
+    "primary_parse_fail_max_increase": 0.005,
+    "vqa_point_drop_max": 0.005,
+    "vqa_paired_ci95_lower_bound_min": -0.015
+  },
+  "reference_scores": {
+    "untrained_gcq_primary_rec": 0.8053333333333333,
+    "untrained_gcq_primary_giou": 0.7087078091647582,
+    "untrained_gcq_primary_precise_iou": 0.6674666666666667,
+    "untrained_gcq_primary_parse_fail": 0.0013333333333333333,
+    "w4_cwce_primary_rec": 0.8173333333333334,
+    "untrained_gcq_vqa5k": 0.7737
+  },
+  "paired_bootstrap": {
+    "unit": "image-clustered paired candidate-minus-untrained-GCQ",
+    "resamples": 10000,
+    "base_seed": 20260850,
+    "candidate_seed_stride": 5,
+    "metric_offsets": {
+      "rec": 0,
+      "giou": 1,
+      "precise_iou": 2,
+      "parse_fail": 3,
+      "vqa": 4
+    },
+    "parse_fail_scope": "primary REC rows only, as fixed by the bound parent amendment"
+  },
+  "selection_order": [
+    "maximum primary REC",
+    "maximum primary precise-IoU",
+    "maximum primary GIoU",
+    "earlier optimizer step",
+    "stable recipe identifier"
+  ],
+  "confirmation_policy": {
+    "fresh_vqa_and_refcocoplus_touched_by_this_round": false,
+    "authorization_if_no_candidate_passes": "none",
+    "authorization_if_candidate_passes": "only the single selected checkpoint may advance under the separately frozen confirmation protocol"
+  }
+}
