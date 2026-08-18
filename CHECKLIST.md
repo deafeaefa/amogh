@@ -35,7 +35,7 @@ hurting general capability.
 - [ ] Restrict the cheap proxy to the four numeric coordinate spans, then rerank a fixed top-24 shortlist with decoded paired GIoU
 - [ ] Replace one-shot ratio-greedy allocation with width-4 conditional beam/sequential selection; stop at non-positive marginal gain and report actual bits used
 - [ ] Compare at matched memory against uniform W4, original coarse GCQ, random, VQA-driven, and a clearly labeled MABA-style additive allocator
-- [ ] Cite MABA (CVPR Findings 2026) and narrow novelty to grounding-conditioned, coordinate-specific protection and object-scale/held-out grounding evaluation
+- [x] Cite MABA (CVPR Findings 2026) and narrow novelty to grounding-conditioned, coordinate-specific protection and object-scale/held-out grounding evaluation
 
 ### Recovery training — implemented; corrected evaluation running
 - [x] Implement deterministic 8k training data: 4.5k RefCOCO-family REC + 1.5k size-balanced COCO grounding + 2k caption replay
@@ -126,13 +126,13 @@ hurting general capability.
 - [x] Week 4: **full testA/testB CONFIRMATIONS COMPLETE** — testA (n=5,657): 90.7/86.9/88.7/89.2 (BF16/W4/GCQ4.25/GCQ4.5, 49–60% recovery); testB (n=5,095): 84.7/79.9/81.4/81.9 (32–43% recovery); replicates subset numbers; harder split recovers less (consistent story)
 
 ## Rigor gates (must all hold before submission)
-- [ ] Novelty claims updated for MABA (CVPR Findings 2026): do not claim first VLM mixed precision, first gradient-guided allocation, or broad first capability-aware PTQ
+- [x] Novelty claims updated for MABA (CVPR Findings 2026): do not claim first VLM mixed precision, first gradient-guided allocation, or broad first capability-aware PTQ
 - [x] Data hygiene specified: D_probe/D_dev/test disjoint; RefCOCOg umd split; cross-variant image exclusion
 - [x] Profiling direction correct (promote-one-from-fully-quantized, not demote-one-from-BF16)
 - [x] Floor-corrected retention R′ defined; GIoU never reported as a ratio
 - [x] VQA constraint pre-registered (1.5 pts, paired test, fixed ~5k items)
 - [x] Kill criteria pre-registered for H1/H2/proxy/method-ceiling
-- [ ] Scooping re-check updated after finding MABA; retain only the narrower grounding-conditioned/coordinate-specific/object-scale claim and rerun before submission
+- [ ] Scooping re-check updated after finding MABA; retain only the narrower grounding-conditioned/coordinate-specific/object-scale claim and rerun before submission (novelty text now narrowed in main.tex 2026-08-17; the literature re-search itself still needs to run right before submission)
 - [x] Anonymization audit clean: empty PDF author metadata, \author{Anonymous}, no identifying strings in PDF or tex (one false positive: "generic")
 
 ## Submission mechanics
