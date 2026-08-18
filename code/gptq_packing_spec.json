@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "artifact_kind": "gcq_gptq_packing_spec",
+  "code_tensor_order": "row_major_out_features_then_in_features",
+  "group_axis": "input_features",
+  "group_size": 128,
+  "tail_group": "ceil_division_no_padding_in_logical_weight_count",
+  "quantization": {
+    "scheme": "symmetric_signed_absmax",
+    "zero_point": null,
+    "w4_integer_range": [-7, 7],
+    "w8_integer_range": [-127, 127]
+  },
+  "w4_codes": {
+    "encoding": "four_bit_twos_complement",
+    "pair_order": "first_code_low_nibble_second_code_high_nibble",
+    "odd_tail": "zero_high_nibble",
+    "bytes": "ceil(numel/2)"
+  },
+  "w8_codes": {
+    "encoding": "signed_int8_twos_complement",
+    "bytes": "numel"
+  },
+  "scales": {
+    "dtype": "ieee754_binary16",
+    "byte_order": "little_endian",
+    "shape": "[out_features, ceil(in_features/group_size)]",
+    "bytes": "2*out_features*ceil(in_features/group_size)",
+    "shared_between_candidates": false,
+    "note": "W4 and W8 each serialize their own scale tensor even though scale payload sizes match."
+  },
+  "dequantization": "weight[row,col] = signed_code[row,col] * fp16_scale[row,floor(col/group_size)]",
+  "accounting": {
+    "logical_projection_payload_bytes": "code_bytes + scale_bytes",
+    "promotion_delta_bytes": "w8_payload_bytes - w4_payload_bytes",
+    "primary_budget_excludes": [
+      "JSON manifest/container overhead",
+      "fixed vision tower",
+      "fixed embeddings",
+      "fixed lm_head"
+    ],
+    "dense_qdq_tensor_is_not_a_compressed_checkpoint": true
+  },
+  "implementation": "gptq_candidates.py"
+}

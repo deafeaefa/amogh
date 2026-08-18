@@ -59,13 +59,8 @@ def spans_overlap(a: tuple[int, int], b: tuple[int, int]) -> bool:
     return a[0] < b[1] and a[1] > b[0]
 
 
-def find_answer_token_positions(tokenizer, ids: list[int], answer: str, max_tail_tokens: int = 128):
-    """Locate assistant-answer tokens and the four numeric coordinate groups.
-
-    We decode the actual context-tokenized tail one token at a time.  This is
-    intentionally not based on separately tokenizing ``answer`` because BPE
-    boundaries can differ in context.
-    """
+def _answer_token_layout(tokenizer, ids: list[int], answer: str, max_tail_tokens: int):
+    """Return context-tokenized tail pieces and answer-relative character spans."""
     k = min(max_tail_tokens, len(ids))
     pieces = [tokenizer.decode([token_id], skip_special_tokens=False) for token_id in ids[-k:]]
     tail = "".join(pieces)
@@ -75,27 +70,63 @@ def find_answer_token_positions(tokenizer, ids: list[int], answer: str, max_tail
     answer_span = (answer_start, answer_start + len(answer))
     number_spans = [(answer_start + a, answer_start + b) for a, b in coordinate_number_spans(answer)]
 
-    answer_positions = []
-    coord_positions = []
+    token_spans = []
     offset = 0
     for local_index, piece in enumerate(pieces):
-        token_span = (offset, offset + len(piece))
-        absolute_index = len(ids) - k + local_index
+        token_spans.append((len(ids) - k + local_index, (offset, offset + len(piece))))
+        offset += len(piece)
+    return answer_span, number_spans, token_spans
+
+
+def find_answer_coordinate_token_groups(
+    tokenizer, ids: list[int], answer: str, max_tail_tokens: int = 128
+) -> list[list[int]]:
+    """Locate one context-token-position group for each numeric coordinate.
+
+    The returned outer list always has four entries. A coordinate may occupy
+    multiple BPE tokens; callers can therefore average within each inner list
+    before averaging across coordinates.
+    """
+    _, number_spans, token_spans = _answer_token_layout(
+        tokenizer, ids, answer, max_tail_tokens
+    )
+    groups = [
+        [index for index, token_span in token_spans if spans_overlap(token_span, number_span)]
+        for number_span in number_spans
+    ]
+    if len(groups) != 4 or any(not group for group in groups):
+        raise ValueError(f"failed to locate all four coordinate token groups: {groups}")
+    return groups
+
+
+def find_answer_token_positions(tokenizer, ids: list[int], answer: str, max_tail_tokens: int = 128):
+    """Locate assistant-answer tokens and numeric coordinate token positions.
+
+    We decode the actual context-tokenized tail one token at a time.  This is
+    intentionally not based on separately tokenizing ``answer`` because BPE
+    boundaries can differ in context.
+    """
+    answer_span, number_spans, token_spans = _answer_token_layout(
+        tokenizer, ids, answer, max_tail_tokens
+    )
+
+    answer_positions = []
+    coord_positions = []
+    for absolute_index, token_span in token_spans:
         if spans_overlap(token_span, answer_span):
             answer_positions.append(absolute_index)
         if any(spans_overlap(token_span, number_span) for number_span in number_spans):
             coord_positions.append(absolute_index)
-        offset += len(piece)
 
     if not answer_positions:
         raise ValueError("no assistant-answer tokens found")
     if number_spans:
-        for number_span in number_spans:
-            if not any(spans_overlap(
-                (sum(len(x) for x in pieces[:i]), sum(len(x) for x in pieces[:i + 1])),
-                number_span,
-            ) for i in range(len(pieces))):
-                raise ValueError(f"coordinate span {number_span} has no token overlap")
+        groups = [
+            [index for index, token_span in token_spans if spans_overlap(token_span, number_span)]
+            for number_span in number_spans
+        ]
+        if any(not group for group in groups):
+            raise ValueError(f"coordinate token grouping failed: {groups}")
         if len(coord_positions) < 4:
             raise ValueError(f"too few coordinate tokens: {coord_positions}")
     return answer_positions, coord_positions

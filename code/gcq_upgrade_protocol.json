@@ -1,0 +1,209 @@
+{
+  "schema_version": 1,
+  "protocol_id": "gcq-projection-gptq-beam-v2",
+  "design_revision": 2,
+  "created_at_utc": "2026-08-18T02:14:59Z",
+  "pre_score_amendments": [
+    {
+      "at_utc": "2026-08-18T02:38:01Z",
+      "change": "disable Pareto pruning in the primary beam",
+      "reason": "a CPU-only synthetic integration test showed that current-score/cost dominance can remove a parent that later participates in the best conditional interaction, defeating the purpose of width-4 search",
+      "upgraded_model_scores_seen": false
+    },
+    {
+      "at_utc": "2026-08-18T04:00:00Z",
+      "change": "bind a disjoint 512-image VQAv2-train control manifest and fully specify the MABA-style modality balance",
+      "reason": "the pre-score integration audit found that the control data identity and image/text weighting were described but not hash-bound or numerically fixed",
+      "upgraded_model_scores_seen": false
+    }
+  ],
+  "status": "design_frozen_inputs_unbound",
+  "status_note": "All methodological choices below are frozen before upgraded projection scores or decoded results. Calibration, profiling, candidate-bank, and code hashes must be bound in a derived launch protocol before GPU profiling begins.",
+  "parent_git_commit": "96c414a942d8657bd8a68edd63bfc0f095bdf378",
+  "objective": {
+    "primary": "maximize training-only eight-cell macro mean decoded GIoU at no more than 4.5 logical decoder weight bits",
+    "success_target": "recover at least 75% of the uniform-W4 loss on the existing development comparison",
+    "stretch_target": "recover at least 90% of the uniform-W4 loss",
+    "recovery_formula": "(score_candidate - score_W4) / (score_BF16 - score_W4)",
+    "constraints": [
+      "VQAv2 must be no more than 1.5 points below uniform W4",
+      "POPE must be no more than 1.5 points below uniform W4",
+      "no confirmation result may affect allocation or checkpoint choice"
+    ]
+  },
+  "model": {
+    "id": "Qwen/Qwen3-VL-2B-Instruct",
+    "revision": "89644892e4d85e24eaac8bacfd4f463576704203",
+    "decoder_layers": 28,
+    "projection_suffixes": [
+      "self_attn.q_proj",
+      "self_attn.k_proj",
+      "self_attn.v_proj",
+      "self_attn.o_proj",
+      "mlp.gate_proj",
+      "mlp.up_proj",
+      "mlp.down_proj"
+    ],
+    "expected_projection_count": 196,
+    "expected_decoder_weight_count": 1409286144
+  },
+  "quantization": {
+    "algorithm": "GPTQ second-order error compensation",
+    "candidate_bits": [4, 8],
+    "group_size": 128,
+    "block_size": 128,
+    "percdamp": 0.01,
+    "scheme": "symmetric signed absmax, qmax=2^(bits-1)-1, no zero point",
+    "scale_dtype": "float16",
+    "prefix_policy": "all earlier decoder layers installed from their cached W4 candidates",
+    "candidate_pair_rule": "W4 and W8 for one projection use identical pristine BF16 weight and independent clones of one immutable Hessian",
+    "calibration": {
+      "source": "Salesforce/wikitext wikitext-2-raw-v1 train",
+      "role": "standard text-only quantizer calibration",
+      "examples": 128,
+      "sequence_length": 512,
+      "selection_seed": 20260817,
+      "padding_allowed": false,
+      "revision_and_token_ids_must_be_hashed": true
+    },
+    "artifact_accounting": {
+      "primary": "actual serialized packed code and scale payload bytes",
+      "fallback_label_if_container_not_materialized": "logical packed decoder payload bytes",
+      "dense_bf16_qdq_must_not_be_called_compressed_checkpoint": true,
+      "fixed_nondecoder_components_reported_separately": true
+    }
+  },
+  "profiling_data": {
+    "proxy_manifest": "gcq_profile_proxy_train_512.json",
+    "decode_manifest": "gcq_profile_decode_train_512.json",
+    "examples_per_manifest": 512,
+    "unique_images_per_manifest": 512,
+    "proxy_decode_image_disjoint": true,
+    "cells": {
+      "tasks": ["rec", "coco_grounding"],
+      "relative_area_quartiles": [1, 2, 3, 4],
+      "examples_per_task_quartile_cell": 64
+    },
+    "rec_sources": ["refcoco", "refcocoplus", "refcocog"],
+    "category_rule": "one non-crowd instance of the requested category in the complete image annotation, including crowd annotations in the ambiguity check",
+    "required_category_absolute_sizes": ["small", "medium", "large"],
+    "selection_order": "SHA-256 rank with fixed seed; independent of upstream iteration order",
+    "forbidden_sources": [
+      "all RefCOCO/RefCOCO+/RefCOCOg non-training images across variants",
+      "old allocation D_probe images",
+      "recovery_train_8k images",
+      "recovery_train_vqa_replay_12k images",
+      "recovery_dev_1k images",
+      "fresh VQAv2 confirmation images",
+      "RefCOCO+ confirmation images",
+      "all ODinW data"
+    ]
+  },
+  "proxy": {
+    "teacher": "pinned BF16 model",
+    "base": "cached all-W4 GPTQ composition",
+    "candidate": "replace exactly one projection with its cached matched GPTQ-W8 tensor",
+    "positions": "tokens overlapping only the four numeric bbox_2d coordinate spans",
+    "distribution": "full-vocabulary teacher-to-student KL in float32",
+    "aggregation": [
+      "mean tokens within each coordinate",
+      "mean four coordinates within each row",
+      "mean rows within each task x relative-area-quartile cell",
+      "macro mean over all eight cells"
+    ],
+    "shortlist_size": 24,
+    "shortlist_rule": "positive macro KL repair per exact added byte, descending",
+    "shortlist_ties": ["larger raw macro repair", "canonical full module name"],
+    "membership_frozen_before_decoding": true
+  },
+  "decoded_rerank": {
+    "manifest": "gcq_profile_decode_train_512.json",
+    "baseline": "decode cached all-W4 once",
+    "candidates": "decode every one of the frozen 24 singleton promotions",
+    "primary_metric": "paired mean-GIoU change, macro averaged over eight cells",
+    "parse_failure_giou": -1.0,
+    "ties": [
+      "smaller parse-failure increase",
+      "larger precise-IoU improvement",
+      "larger proxy repair per byte",
+      "canonical full module name"
+    ],
+    "negative_singletons_remain_eligible_for_conditional_search": true
+  },
+  "allocation": {
+    "candidate_membership": "exactly the frozen top-24 proxy shortlist",
+    "objective": "eight-cell macro mean decoded GIoU on the training-only decode manifest",
+    "beam_width": 4,
+    "primary_cap_average_decoder_code_bits": 4.5,
+    "primary_cap_added_payload_bytes": 88080384,
+    "secondary_cap_average_decoder_code_bits": 4.25,
+    "secondary_policy": "derive from the same frozen trace without retuning or another search",
+    "marginal_rule": "strictly greater than zero relative to each parent state",
+    "state_cost": "sum of exact cached W8-minus-W4 packed payload bytes",
+    "deduplicate_states": true,
+    "pareto_prune": false,
+    "pareto_prune_rationale": "a currently lower-scoring or costlier parent may have the strongest future conditional interaction; pruning it would silently collapse beam diversity",
+    "beam_order": ["larger objective", "fewer bytes", "lexicographic sorted module tuple"],
+    "final_order": ["larger objective", "fewer bytes", "lexicographic sorted module tuple"],
+    "stop": "no feasible strictly positive conditional marginal remains",
+    "report_actual_bits_used": true,
+    "evaluation_cache_key": "SHA-256 of sorted exact module names plus candidate-bank and decode-manifest hashes"
+  },
+  "matched_controls": {
+    "target_bytes": "exact added bytes used by the final primary GCQ allocation",
+    "uniform_w4": "zero-promotion common anchor; report its smaller actual payload",
+    "projection_additive_gcq": "exact-cost 0/1 knapsack over isolated numeric-coordinate proxy repairs",
+    "original_coarse_gcq": "historical attention/MLP groups materialized from the new bank and reported at their historical actual bytes",
+    "vqa_driven": {
+      "allocation": "exact-cost 0/1 knapsack over training-only answer-token KL repair",
+      "manifest": "gcq_vqa_control_train_512.json",
+      "examples": 512,
+      "unique_images": 512,
+      "source": "official VQAv2 train questions and annotations",
+      "selection_seed": 20260817,
+      "example_selection": "one SHA-256-ranked question per eligible image followed by SHA-256-ranked unique images",
+      "exclusions": "all images used by earlier recovery training/development, the two GCQ profile manifests, D_probe, and all confirmation manifests",
+      "score": "mean W4 minus singleton-W8 full-vocabulary BF16-teacher KL at causal logits predicting official answer tokens"
+    },
+    "random": {
+      "rule": "uniform draws from exact-cost feasible projection subsets via dynamic-programming counts; report every seed and their mean; never select the best seed",
+      "seeds": [2026081701, 2026081702, 2026081703, 2026081704, 2026081705, 2026081706, 2026081707, 2026081708, 2026081709, 2026081710]
+    },
+    "maba_style": {
+      "label": "additive MABA-style reimplementation, not the authors' implementation",
+      "allocation": "same exact-cost 0/1 knapsack",
+      "activation_stream": "all-W4 student on the frozen VQAv2-train control manifest",
+      "local_score": "W4-to-W8 reduction in projection-output squared reconstruction error relative to BF16 projection-output energy",
+      "modality_weights": {
+        "image_tokens": 0.5,
+        "text_tokens": 0.5
+      }
+    }
+  },
+  "selection_and_confirmation": {
+    "selection_data_only": [
+      "standard text calibration",
+      "gcq_profile_proxy_train_512",
+      "gcq_profile_decode_train_512"
+    ],
+    "development_success_check": "existing exposed RefCOCO development comparison, once after allocation freeze",
+    "confirmation_forbidden_until_allocation_and_controls_frozen": [
+      "RefCOCO+ confirmation",
+      "RefCOCOg official evaluation",
+      "corrected ODinW",
+      "fresh VQAv2 confirmation",
+      "POPE confirmation"
+    ],
+    "failure_policy": "retain and report the frozen result; do not use confirmation outcomes to try another allocation"
+  },
+  "required_bound_hashes": [
+    "implementation_tree_sha256",
+    "calibration_manifest_sha256",
+    "proxy_manifest_sha256",
+    "decode_manifest_sha256",
+    "vqa_control_manifest_sha256",
+    "candidate_bank_manifest_sha256",
+    "packing_spec_sha256"
+  ],
+  "bound_hashes": null
+}

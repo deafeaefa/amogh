@@ -16,6 +16,7 @@ from recovery_utils import (
     IOU_THRESHOLDS,
     coordinate_number_spans,
     coordinate_weighted_ce,
+    find_answer_coordinate_token_groups,
     find_answer_token_positions,
     precise_iou_score,
 )
@@ -62,6 +63,18 @@ def test_context_token_mask_hits_only_coordinate_numbers():
     assert 3 in answer_positions  # contains bbox_2d's non-coordinate "2"
     assert 3 not in coordinate_positions
     assert 5 not in coordinate_positions  # comma
+
+
+def test_context_token_groups_preserve_four_coordinates_and_multitoken_numbers():
+    pieces = [
+        "prefix", '{"bbox_2d": [', "1", "00", ",", "20", ",", "3", "00", ",", "1000", "]}"
+    ]
+    tokenizer = PieceTokenizer(pieces)
+    answer = '{"bbox_2d": [100,20,300,1000]}'
+    groups = find_answer_coordinate_token_groups(
+        tokenizer, list(range(len(pieces))), answer
+    )
+    assert groups == [[2, 3], [5], [7, 8], [10]]
 
 
 def test_gamma_one_matches_per_example_masked_ce():

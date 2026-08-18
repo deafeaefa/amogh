@@ -13,10 +13,50 @@ from recovery_utils import precise_iou_score
 def load_jsonl(path):
     rows = {}
     with open(path) as f:
-        for line in f:
+        for line_number, line in enumerate(f, 1):
+            if not line.strip():
+                continue
             row = json.loads(line)
-            rows[row["uid"]] = row
+            uid = row.get("uid")
+            if not isinstance(uid, str) or not uid:
+                raise ValueError(f"{path}:{line_number} has no non-empty UID")
+            if uid in rows:
+                raise ValueError(f"{path}:{line_number} duplicates UID {uid!r}")
+            rows[uid] = row
+    if not rows:
+        raise ValueError(f"{path} contains no result rows")
     return rows
+
+
+def validate_paired_rows(baseline, method, subset_rows):
+    """Require exact UID order and image identity across both logs and subset."""
+    baseline_uids = list(baseline)
+    method_uids = list(method)
+    if baseline_uids != method_uids:
+        raise ValueError("paired logs do not contain identical UIDs in identical order")
+    subset_by_uid = {}
+    subset_uids = []
+    for index, row in enumerate(subset_rows):
+        uid = row.get("uid")
+        if not isinstance(uid, str) or not uid:
+            raise ValueError(f"subset row {index} has no non-empty UID")
+        if uid in subset_by_uid:
+            raise ValueError(f"subset duplicates UID {uid!r}")
+        subset_by_uid[uid] = row
+        subset_uids.append(uid)
+    if baseline_uids != subset_uids:
+        raise ValueError("subset and paired logs do not contain identical UIDs in identical order")
+    for uid in baseline_uids:
+        expected_image = subset_by_uid[uid].get("image_id")
+        for label, row in (("baseline", baseline[uid]), ("method", method[uid])):
+            if row.get("image_id") is not None and row.get("image_id") != expected_image:
+                raise ValueError(
+                    f"{label} image_id mismatch for {uid!r}: "
+                    f"{row.get('image_id')!r} != {expected_image!r}"
+                )
+        if baseline[uid].get("image_id") != method[uid].get("image_id"):
+            raise ValueError(f"paired result image metadata differs for {uid!r}")
+    return {uid: subset_by_uid[uid]["image_id"] for uid in baseline_uids}
 
 
 def per_example(row, metric):
@@ -42,12 +82,9 @@ def main():
 
     baseline = load_jsonl(args.baseline)
     method = load_jsonl(args.method)
-    if set(baseline) != set(method):
-        raise SystemExit("paired logs do not contain identical UIDs")
     with open(args.subset) as f:
-        image_by_uid = {row["uid"]: row["image_id"] for row in json.load(f)}
-    if set(baseline) - set(image_by_uid):
-        raise SystemExit("subset is missing UIDs from result logs")
+        subset_rows = json.load(f)
+    image_by_uid = validate_paired_rows(baseline, method, subset_rows)
 
     clusters = defaultdict(list)
     for uid in sorted(baseline):
